@@ -1,0 +1,58 @@
+[
+  {
+    "id": "scope",
+    "title": "Chốt danh sách & nhập dữ liệu",
+    "detail": "Giữ danh sách đã xác thực; gộp VD05 vào VD01; 3 bài social/tuần trên 3 nền tảng khác nhau.",
+    "status": "done",
+    "updatedAt": "2026-11-25"
+  },
+  {
+    "id": "dashboard",
+    "title": "Bảng điều hành & quản lý công việc",
+    "detail": "Tìm kiếm, lọc, giao việc, tiến độ, trạng thái và nhật ký.",
+    "status": "done",
+    "updatedAt": "2026-11-25"
+  },
+  {
+    "id": "permissions",
+    "title": "Đăng nhập & phân quyền",
+    "detail": "Chủ trung tâm, Quản lý, Nhân viên; kiểm tra quyền ở máy chủ.",
+    "status": "done",
+    "updatedAt": "2026-11-25"
+  },
+  {
+    "id": "weekly",
+    "title": "Social luân phiên & nhắc hằng ngày",
+    "detail": "Ba nền tảng khác nhau mỗi tuần; tính kết quả theo URL đã xuất bản.",
+    "status": "done",
+    "updatedAt": "2026-11-25"
+  },
+  {
+    "id": "qa",
+    "title": "Kiểm thử bản TEST",
+    "detail": "Kiểm tra nghiệp vụ, API ba vai trò và build đạt; đã thử giao việc, gửi duyệt, reload và bố cục desktop/mobile.",
+    "status": "done",
+    "updatedAt": "2026-11-25"
+  },
+  {
+    "id": "github",
+    "title": "Đưa mã nguồn lên GitHub",
+    "detail": "Repo NhonNguyen29/MKT-LongThanh.",
+    "status": "doing",
+    "updatedAt": "2026-11-25"
+  },
+  {
+    "id": "vercel",
+    "title": "Kết nối Vercel & PostgreSQL",
+    "detail": "Chưa kết nối tài khoản hosting hoặc cơ sở dữ liệu. Bản TEST chạy local trước.",
+    "status": "pending",
+    "updatedAt": "2026-11-25"
+  },
+  {
+    "id": "external",
+    "title": "Nhắc qua email, Facebook, Zalo",
+    "detail": "Giai đoạn sau; chưa kết nối và chưa gửi thông báo ra ngoài.",
+    "status": "pending",
+    "updatedAt": "2026-11-25"
+  }
+]
