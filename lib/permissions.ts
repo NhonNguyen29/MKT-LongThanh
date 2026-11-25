@@ -1,7 +1,18 @@
 import type { State, Task, User } from "./types";
+import { vietnamDate, weekStart } from "./calendar";
 export const canManage = (u: User) =>
   u.role === "owner" || u.role === "manager";
-export const canSee = (u: User, t: Task) => canManage(u) || t.assignee === u.id;
+export function isTaskInWeek(t: Task, currentWeek = weekStart(vietnamDate())) {
+  if (t.week) return t.week === currentWeek;
+  if (t.dueDate) return weekStart(t.dueDate) === currentWeek;
+  if (t.assignedWeek) return t.assignedWeek === currentWeek;
+  return false;
+}
+export const canSee = (
+  u: User,
+  t: Task,
+  currentWeek = weekStart(vietnamDate()),
+) => canManage(u) || (t.assignee === u.id && isTaskInWeek(t, currentWeek));
 export class AppError extends Error {
   constructor(
     message: string,
@@ -13,6 +24,29 @@ export class AppError extends Error {
 export function requireManage(u: User) {
   if (!canManage(u))
     throw new AppError("Bạn không có quyền quản lý công việc này.", 403);
+}
+export function validateProofUrl(raw: string) {
+  const trimmed = raw.trim();
+  if (!trimmed)
+    throw new AppError(
+      "Bắt buộc nhập link bài viết (https://...) trước khi gửi duyệt hoặc xác thực hoàn thành.",
+    );
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    throw new AppError("Link bài viết không hợp lệ.");
+  }
+  if (url.protocol !== "https:")
+    throw new AppError("Link bài viết phải bắt đầu bằng https://.");
+  return url;
+}
+export function validateCompletionProof(t: Task) {
+  if (!t.proofImage?.url)
+    throw new AppError(
+      "Bắt buộc tải lên hình chụp màn hình công việc trước khi gửi duyệt hoặc xác thực hoàn thành.",
+    );
+  validateProofUrl(t.publishedUrl || "");
 }
 export function validatePublication(t: Task, state: State) {
   if (t.publication === "published") {

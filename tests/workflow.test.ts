@@ -74,10 +74,16 @@ test("recurring generation is idempotent and preserves unfinished work", () => {
       !s.tasks.find((t) => t.id === "DK01-2026-11-25")!.archived,
   );
 });
-test("employee only sees assigned work and cannot reassign, approve or inspect another task", () => {
+test("employee only sees assigned work in current week and requires screenshot + link for review/done", () => {
   const s = state();
-  update(s, manager, "VD01", { assignee: employee.id });
+  const thisWeek = weekStart(vietnamDate());
+  update(s, manager, "VD01", { assignee: employee.id, dueDate: addDays(thisWeek, 2) });
+  // Assign another task in NEXT week -> employee must NOT see it
+  update(s, manager, "VD03", { assignee: employee.id, dueDate: addDays(thisWeek, 9) });
   assert.throws(() => update(s, employee, "VD02", { progress: 50 }), {
+    status: 404,
+  });
+  assert.throws(() => update(s, employee, "VD03", { progress: 50 }), {
     status: 404,
   });
   for (const patch of [
@@ -89,7 +95,23 @@ test("employee only sees assigned work and cannot reassign, approve or inspect a
     assert.throws(() => update(s, employee, "VD01", patch), { status: 403 });
   update(s, employee, "VD01", { status: "doing", progress: 55 });
   assert.equal(s.tasks.find((t) => t.id === "VD01")!.progress, 55);
-  update(s, employee, "VD01", { status: "review" });
+  // Submitting review without screenshot or URL must fail
+  assert.throws(() => update(s, employee, "VD01", { status: "review" }), {
+    status: 400,
+  });
+  // Attach proof image & URL -> now review succeeds
+  s.tasks.find((t) => t.id === "VD01")!.proofImage = {
+    url: "/api/assets/proof-VD01-test.png",
+    name: "proof-VD01-test.png",
+    uploadedAt: new Date().toISOString(),
+  };
+  assert.throws(() => update(s, employee, "VD01", { status: "review" }), {
+    status: 400,
+  });
+  update(s, employee, "VD01", {
+    status: "review",
+    publishedUrl: "https://www.facebook.com/saoviet/posts/123",
+  });
   const view = snapshot(s, employee, "local", true);
   assert.deepEqual(
     view.tasks.map((t) => t.id),
@@ -99,9 +121,23 @@ test("employee only sees assigned work and cannot reassign, approve or inspect a
   assert.equal(view.build.length, 0);
   assert.ok(!JSON.stringify(view).includes("passwordHash"));
 });
-test("manager can assign and accept work but cannot manage accounts or reminder settings", () => {
+test("manager can assign and accept work with proof but cannot manage accounts or reminder settings", () => {
   const s = state();
-  update(s, manager, "VD01", { assignee: employee.id, status: "done" });
+  const thisWeek = weekStart(vietnamDate());
+  update(s, manager, "VD01", { assignee: employee.id, dueDate: addDays(thisWeek, 1) });
+  // Cannot mark done without proof screenshot & link
+  assert.throws(() => update(s, manager, "VD01", { status: "done" }), {
+    status: 400,
+  });
+  s.tasks.find((t) => t.id === "VD01")!.proofImage = {
+    url: "/api/assets/proof-VD01-test.png",
+    name: "proof-VD01-test.png",
+    uploadedAt: new Date().toISOString(),
+  };
+  update(s, manager, "VD01", {
+    status: "done",
+    publishedUrl: "https://www.tiktok.com/@saoviet/video/123",
+  });
   assert.equal(s.tasks.find((t) => t.id === "VD01")!.progress, 100);
   for (const action of ["createUser", "updateUser", "settings"])
     assert.throws(() => mutate(s, manager, { action, payload: {} }), {
@@ -129,13 +165,25 @@ test("optimistic version prevents overwriting newer changes", () => {
 });
 test("comments preserve an open edit version; archived work cannot be changed by employees", () => {
   const s = state();
-  update(s, owner, "VD01", { assignee: employee.id });
+  const thisWeek = weekStart(vietnamDate());
+  update(s, owner, "VD01", { assignee: employee.id, dueDate: addDays(thisWeek, 1) });
+  s.tasks.find((t) => t.id === "VD01")!.proofImage = {
+    url: "/api/assets/proof-VD01-c.png",
+    name: "proof-VD01-c.png",
+    uploadedAt: new Date().toISOString(),
+  };
   const version = s.tasks.find((t) => t.id === "VD01")!.version;
   mutate(s, employee, {
     action: "comment",
     payload: { id: "VD01", body: "Ready for review" },
   });
-  update(s, employee, "VD01", { status: "review" }, version);
+  update(
+    s,
+    employee,
+    "VD01",
+    { status: "review", publishedUrl: "https://www.facebook.com/saoviet/posts/99" },
+    version,
+  );
   assert.equal(s.tasks.find((t) => t.id === "VD01")!.comments.length, 1);
   update(s, owner, "VD01", { archived: true });
   assert.throws(() => update(s, employee, "VD01", { progress: 20 }), {

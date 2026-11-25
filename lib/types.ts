@@ -30,8 +30,10 @@ export type Task = {
   comments: { id: string; author: string; body: string; at: string }[];
   history?: string[];
   week?: string;
+  assignedWeek?: string | null;
   platform?: string;
   assets?: { label: string; url: string }[];
+  proofImage?: { url: string; name: string; uploadedAt: string } | null;
 };
 export type Audit = {
   id: string;

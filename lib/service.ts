@@ -6,6 +6,7 @@ import {
   canManage,
   canSee,
   requireManage,
+  validateCompletionProof,
   validatePublication,
 } from "./permissions";
 import { platforms, vietnamDate, weekStart, weeklyRotation } from "./calendar";
@@ -73,9 +74,13 @@ export function mutate(state: State, user: User, input: unknown) {
         409,
       );
     if (!canManage(user)) {
-      if (Object.keys(p.patch).some((k) => !["status", "progress"].includes(k)))
+      if (
+        Object.keys(p.patch).some(
+          (k) => !["status", "progress", "publishedUrl"].includes(k),
+        )
+      )
         throw new AppError(
-          "Nhân viên chỉ được cập nhật tiến độ và gửi duyệt.",
+          "Nhân viên chỉ được cập nhật tiến độ, link bài viết và gửi duyệt.",
           403,
         );
       if (p.patch.status && !["doing", "review"].includes(p.patch.status))
@@ -107,6 +112,21 @@ export function mutate(state: State, user: User, input: unknown) {
         throw new AppError("Ngày đến hạn không hợp lệ.");
     }
     const next = { ...task, ...p.patch };
+    if (typeof p.patch.publishedUrl === "string")
+      next.publishedUrl = p.patch.publishedUrl.trim();
+    if (
+      p.patch.assignee !== undefined &&
+      p.patch.assignee &&
+      !next.week &&
+      !next.dueDate
+    ) {
+      next.assignedWeek = weekStart(vietnamDate());
+    }
+    const enteringReview = next.status === "review" && task.status !== "review";
+    const enteringDone = next.status === "done" && task.status !== "done";
+    if (enteringReview || enteringDone) {
+      validateCompletionProof(next);
+    }
     if (next.status === "done") next.progress = 100;
     if (
       next.week &&
@@ -183,6 +203,8 @@ export function mutate(state: State, user: User, input: unknown) {
       progress: 0,
       publishedUrl: "",
       publishedAt: null,
+      assignedWeek: p.assignee && !p.dueDate ? weekStart(vietnamDate()) : null,
+      proofImage: null,
       version: 1,
       archived: false,
       updatedAt: new Date().toISOString(),

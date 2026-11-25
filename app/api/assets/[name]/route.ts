@@ -12,16 +12,19 @@ export async function GET(
 ) {
   try {
     const { name } = await ctx.params;
-    if (
-      !/^(01-ai-cong-viec|02-seo-quang-cao|03-tin-hoc-van-phong)\.(png|md)$/.test(
+    const isSeedAsset =
+      /^(01-ai-cong-viec|02-seo-quang-cao|03-tin-hoc-van-phong)\.(png|md)$/.test(
         name,
-      )
-    )
+      );
+    const isProofAsset = /^proof-[A-Za-z0-9_-]+\.(png|jpg|webp)$/.test(name);
+    if (!isSeedAsset && !isProofAsset)
       throw new AppError("Không tìm thấy tệp.", 404);
     await transact((s) => {
       const user = currentUser(s, req.cookies.get("mkt_session")?.value);
-      const task = s.tasks.find((t) =>
-        t.assets?.some((a) => a.url === "/api/assets/" + name),
+      const url = "/api/assets/" + name;
+      const task = s.tasks.find(
+        (t) =>
+          t.assets?.some((a) => a.url === url) || t.proofImage?.url === url,
       );
       if (!task || !canSee(user, task))
         throw new AppError("Không có quyền xem tệp.", 403);
@@ -29,18 +32,25 @@ export async function GET(
     const data = databaseUrl()
       ? (
           await database().query(
-            "SELECT body FROM saoviet_private.mkt_assets WHERE name=$1",
+            "SELECT body, content_type FROM saoviet_private.mkt_assets WHERE name=$1",
             [name],
           )
-        ).rows[0]?.body
-      : await readFile(path.join(process.cwd(), ".local", "assets", name));
-    if (!data)
+        ).rows[0]
+      : {
+          body: await readFile(path.join(process.cwd(), ".local", "assets", name)),
+          content_type: name.endsWith(".png")
+            ? "image/png"
+            : name.endsWith(".jpg")
+              ? "image/jpeg"
+              : name.endsWith(".webp")
+                ? "image/webp"
+                : "text/plain; charset=utf-8",
+        };
+    if (!data?.body)
       throw new AppError("Không tìm thấy tệp trong kho tài liệu.", 404);
-    return new NextResponse(data, {
+    return new NextResponse(data.body, {
       headers: {
-        "Content-Type": name.endsWith(".png")
-          ? "image/png"
-          : "text/plain; charset=utf-8",
+        "Content-Type": data.content_type,
         "Cache-Control": "private, no-store",
         "X-Content-Type-Options": "nosniff",
       },

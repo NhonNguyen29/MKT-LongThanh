@@ -1390,6 +1390,7 @@ export default function Dashboard() {
           platforms={data.platforms}
           onClose={() => setSelected(null)}
           onAction={action}
+          onUploaded={load}
         />
       )}
       {create && (
@@ -1575,6 +1576,7 @@ function TaskModal({
   platforms,
   onClose,
   onAction,
+  onUploaded,
 }: {
   task: Task;
   users: SafeUser[];
@@ -1583,17 +1585,47 @@ function TaskModal({
   platforms: Snapshot["platforms"];
   onClose: () => void;
   onAction: (a: string, p: unknown) => Promise<boolean>;
+  onUploaded: () => Promise<void>;
 }) {
   const [draft, setDraft] = useState({ ...task }),
-    [comment, setComment] = useState("");
+    [comment, setComment] = useState(""),
+    [uploading, setUploading] = useState(false),
+    [uploadError, setUploadError] = useState("");
   function field(k: string, v: unknown) {
     setDraft((d) => ({ ...d, [k]: v }));
   }
+  async function uploadProof(file: File | undefined) {
+    if (!file) return;
+    setUploading(true);
+    setUploadError("");
+    try {
+      const form = new FormData();
+      form.append("taskId", task.id);
+      form.append("file", file);
+      const r = await fetch("/api/proofs", { method: "POST", body: form });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Tải ảnh thất bại.");
+      setDraft((prev) => ({
+        ...prev,
+        proofImage: d.proofImage,
+        version: d.version,
+      }));
+      await onUploaded();
+    } catch (e) {
+      setUploadError((e as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  }
+  const lockedForEmployee =
+    !manage &&
+    (task.archived || task.status === "done" || task.publication === "published");
   async function save(e: FormEvent) {
     e.preventDefault();
     const patch: Record<string, unknown> = {
       status: draft.status,
       progress: draft.progress,
+      publishedUrl: draft.publishedUrl,
     };
     if (manage)
       Object.assign(patch, {
@@ -1603,7 +1635,6 @@ function TaskModal({
         assignee: draft.assignee,
         dueDate: draft.dueDate,
         publication: draft.publication,
-        publishedUrl: draft.publishedUrl,
         ...(task.week ? { platform: draft.platform } : {}),
       });
     if (
@@ -1744,14 +1775,30 @@ function TaskModal({
           </label>
         )}
         <div className="publication-box">
-          <h3>Trạng thái xuất bản</h3>
+          <h3>Minh chứng hoàn thành &amp; xuất bản</h3>
           <p>
-            Chỉ ghi đã đăng khi có URL bài thực tế. Quản lý cần mở URL kiểm tra
-            thực tế. Lưu trạng thái không tự đăng bài.
+            Bắt buộc tải lên <strong>ảnh chụp màn hình công việc</strong> và nhập{" "}
+            <strong>link bài viết (https://…)</strong> mới được gửi duyệt hoặc xác
+            thực hoàn thành.
           </p>
           <div className="form-grid">
             <label>
-              Nội dung
+              Link bài viết (bắt buộc khi hoàn thành)
+              <input
+                type="url"
+                placeholder="https://…"
+                value={draft.publishedUrl}
+                disabled={lockedForEmployee}
+                onChange={(e) => field("publishedUrl", e.target.value)}
+                required={
+                  draft.status === "review" ||
+                  draft.status === "done" ||
+                  draft.publication === "published"
+                }
+              />
+            </label>
+            <label>
+              Trạng thái xuất bản
               <select
                 value={draft.publication}
                 disabled={!manage}
@@ -1764,17 +1811,60 @@ function TaskModal({
                 ))}
               </select>
             </label>
+          </div>
+          <div style={{ marginTop: 12 }}>
             <label>
-              URL bài đã đăng
+              Ảnh chụp màn hình minh chứng (PNG/JPG/WebP, tối đa 3,5 MB)
               <input
-                type="url"
-                placeholder="https://…"
-                value={draft.publishedUrl}
-                disabled={!manage}
-                onChange={(e) => field("publishedUrl", e.target.value)}
-                required={draft.publication === "published"}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                disabled={uploading || lockedForEmployee}
+                onChange={(e) => {
+                  void uploadProof(e.target.files?.[0]);
+                  e.currentTarget.value = "";
+                }}
               />
             </label>
+            {uploading && <small>Đang tải ảnh chụp màn hình lên hệ thống…</small>}
+            {uploadError && (
+              <div className="error" role="alert" style={{ marginTop: 6 }}>
+                {uploadError}
+              </div>
+            )}
+            {draft.proofImage?.url ? (
+              <div style={{ marginTop: 10 }}>
+                <a
+                  href={draft.proofImage.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ display: "inline-block" }}
+                >
+                  <img
+                    src={draft.proofImage.url}
+                    alt="Ảnh chụp màn hình minh chứng"
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: 220,
+                      borderRadius: 8,
+                      border: "1px solid rgba(15,23,42,0.12)",
+                      display: "block",
+                    }}
+                  />
+                </a>
+                <small style={{ display: "block", marginTop: 4 }}>
+                  Đã tải lên lúc{" "}
+                  {new Date(draft.proofImage.uploadedAt).toLocaleString("vi-VN")}{" "}
+                  ·{" "}
+                  <a href={draft.proofImage.url} target="_blank" rel="noreferrer">
+                    Mở ảnh đầy đủ
+                  </a>
+                </small>
+              </div>
+            ) : (
+              <small style={{ display: "block", marginTop: 6 }}>
+                Chưa có ảnh chụp màn hình minh chứng.
+              </small>
+            )}
           </div>
         </div>
         {task.assets && (
