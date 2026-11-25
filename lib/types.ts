@@ -82,4 +82,6 @@ export type Snapshot = {
   settings: State["settings"];
   storage: "local" | "postgres";
   localTest: boolean;
+  gmailConfigured: boolean;
+  gmailSender: string;
 };

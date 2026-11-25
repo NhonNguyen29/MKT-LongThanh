@@ -12,6 +12,7 @@ import {
 import { platforms, vietnamDate, weekStart, weeklyRotation } from "./calendar";
 import { ensureRecurring } from "./seed";
 import { hashPassword, tokenHash, verifyPassword } from "./security";
+import { gmailSenderEmail, isGmailConfigured } from "./mailer";
 import build from "@/data/build-progress.json";
 const status = z.enum(["todo", "doing", "review", "changes", "done", "paused"]);
 const patchSchema = z
@@ -389,5 +390,7 @@ export function snapshot(
     settings: state.settings,
     storage,
     localTest,
+    gmailConfigured: isGmailConfigured(),
+    gmailSender: gmailSenderEmail(),
   };
 }

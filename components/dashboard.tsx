@@ -1156,8 +1156,7 @@ export default function Dashboard() {
                     {stageDone}/{data.build.length} hạng mục hoàn thành
                   </h2>
                   <p>
-                    Trạng thái cập nhật theo các phần đã triển khai và kiểm tra;
-                    không tính hosting hay kênh nhắc bên ngoài là đã kết nối.
+                    Trạng thái cập nhật theo các hạng mục đã triển khai và kiểm tra.
                   </p>
                 </div>
                 <div className="build-progress">
@@ -1250,24 +1249,51 @@ export default function Dashboard() {
                 >
                   Bật thông báo trên máy
                 </button>
-                <small>
-                  Lịch nhắc trong Codex hiện có hoạt động riêng; đổi giờ tại đây
-                  chỉ đổi nhắc trong web.
-                </small>
               </section>
               <section className="panel settings-card">
                 <Globe size={25} />
-                <h2>Kênh nhắc mở rộng</h2>
-                <p>Chuẩn bị cho giai đoạn tiếp theo.</p>
-                {["Email", "Facebook / Messenger", "Zalo"].map((s) => (
-                  <div className="integration" key={s}>
-                    <strong>{s}</strong>
-                    <span>Chưa kết nối</span>
-                  </div>
-                ))}
-                <p className="panel-hint">
-                  Hiện chưa gửi email hoặc tin nhắn tự động từ web.
+                <h2>Thông báo qua Gmail</h2>
+                <p>
+                  Tự động gửi email báo việc mới khi giao việc và nhắc việc hằng
+                  ngày lúc {data.settings.reminderTime} từ{" "}
+                  <strong>{data.gmailSender}</strong>.
                 </p>
+                <div className="integration">
+                  <strong>Gmail nhân viên</strong>
+                  <span>
+                    {data.gmailConfigured
+                      ? "Đã kết nối"
+                      : "Chưa cấu hình App Password"}
+                  </span>
+                </div>
+                {manage && (
+                  <button
+                    className="primary"
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        const r = await fetch("/api/notify", { method: "POST" });
+                        const d = await r.json();
+                        if (!r.ok) {
+                          setToast(d.error || "Không gửi được email nhắc việc.");
+                        } else if (d.sent === 0) {
+                          setToast("Hiện không có nhân viên nào có việc cần nhắc.");
+                        } else {
+                          setToast(
+                            `Đã gửi email nhắc việc đến ${d.sent} nhân viên (${d.recipients.join(", ")}).`,
+                          );
+                        }
+                      } catch {
+                        setToast("Lỗi kết nối khi gửi email.");
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    Gửi email nhắc việc cho nhân viên ngay
+                  </button>
+                )}
               </section>
               <section className="panel settings-card">
                 <ShieldCheck size={25} />
