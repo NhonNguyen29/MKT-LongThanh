@@ -30,15 +30,15 @@
   {
     "id": "qa",
     "title": "Kiểm thử bản TEST",
-    "detail": "Kiểm tra nghiệp vụ, API ba vai trò và build đạt; đã thử giao việc, gửi duyệt, reload và bố cục desktop/mobile.",
+    "detail": "9 kiểm thử nghiệp vụ, API ba vai trò, typecheck và build đạt. Đã thử giao việc → nhân viên gửi duyệt → reload, bố cục desktop/mobile.",
     "status": "done",
     "updatedAt": "2026-11-25"
   },
   {
     "id": "github",
     "title": "Đưa mã nguồn lên GitHub",
-    "detail": "Repo NhonNguyen29/MKT-LongThanh.",
-    "status": "doing",
+    "detail": "Đã push mã nguồn lên nhánh main của NhonNguyen29/MKT-LongThanh; có workflow kiểm tra tự động.",
+    "status": "done",
     "updatedAt": "2026-11-25"
   },
   {
