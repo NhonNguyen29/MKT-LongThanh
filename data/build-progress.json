@@ -44,8 +44,8 @@
   {
     "id": "vercel",
     "title": "Kết nối Vercel & Supabase",
-    "detail": "Bản TEST đã duyệt. Đã chuẩn bị schema riêng, chuyển dữ liệu và tư liệu có phân quyền; chờ kết nối tài khoản để triển khai và kiểm tra online.",
-    "status": "doing",
+    "detail": "Đã triển khai online tại https://mkt-longthanh.vercel.app kết nối PostgreSQL Supabase (schema riêng saoviet_private, RLS bật). Đã nạp 26 công việc + 6 tư liệu riêng tư, loại tài khoản TEST và kiểm tra đăng nhập/phân quyền/tải tư liệu thực tế.",
+    "status": "done",
     "updatedAt": "2026-11-25"
   },
   {
