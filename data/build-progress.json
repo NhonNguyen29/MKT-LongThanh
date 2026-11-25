@@ -43,9 +43,9 @@
   },
   {
     "id": "vercel",
-    "title": "Kết nối Vercel & PostgreSQL",
-    "detail": "Chưa kết nối tài khoản hosting hoặc cơ sở dữ liệu. Bản TEST chạy local trước.",
-    "status": "pending",
+    "title": "Kết nối Vercel & Supabase",
+    "detail": "Bản TEST đã duyệt. Đã chuẩn bị schema riêng, chuyển dữ liệu và tư liệu có phân quyền; chờ kết nối tài khoản để triển khai và kiểm tra online.",
+    "status": "doing",
     "updatedAt": "2026-11-25"
   },
   {

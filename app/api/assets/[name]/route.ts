@@ -4,6 +4,7 @@ import path from "node:path";
 import { transact } from "@/lib/store";
 import { currentUser } from "@/lib/service";
 import { canSee, AppError } from "@/lib/permissions";
+import { database, databaseUrl } from "@/lib/database";
 export const runtime = "nodejs";
 export async function GET(
   req: NextRequest,
@@ -25,9 +26,16 @@ export async function GET(
       if (!task || !canSee(user, task))
         throw new AppError("Không có quyền xem tệp.", 403);
     });
-    const data = await readFile(
-      path.join(process.cwd(), ".local", "assets", name),
-    );
+    const data = databaseUrl()
+      ? (
+          await database().query(
+            "SELECT body FROM saoviet_private.mkt_assets WHERE name=$1",
+            [name],
+          )
+        ).rows[0]?.body
+      : await readFile(path.join(process.cwd(), ".local", "assets", name));
+    if (!data)
+      throw new AppError("Không tìm thấy tệp trong kho tài liệu.", 404);
     return new NextResponse(data, {
       headers: {
         "Content-Type": name.endsWith(".png")
@@ -43,7 +51,7 @@ export async function GET(
         error:
           e instanceof AppError
             ? e.message
-            : "Tệp chỉ có ở bản local; cần chuyển kho tài liệu khi triển khai.",
+            : "Chưa thể mở tệp. Vui lòng thử lại hoặc liên hệ quản lý.",
       },
       { status: e instanceof AppError ? e.status : 404 },
     );

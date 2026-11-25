@@ -246,7 +246,9 @@ function Login({ onLogin }: { onLogin: () => void }) {
         </div>
       </div>
       <div className="login-card">
-        <span className="test-label">BẢN TEST</span>
+        <span className="test-label">
+          {local ? "BẢN TEST" : "SAO VIỆT · NỘI BỘ"}
+        </span>
         <h2>Chào mừng trở lại</h2>
         <p>Đăng nhập để mở không gian làm việc Sao Việt.</p>
         <form
@@ -577,7 +579,9 @@ export default function Dashboard() {
                 <n.icon size={19} />
                 <span>{n.title}</span>
                 {n.id === "tasks" && <b>{unfinished.length}</b>}
-                {n.id === "build" && <i className="nav-new">TEST</i>}
+                {n.id === "build" && data.localTest && (
+                  <i className="nav-new">TEST</i>
+                )}
               </button>
             ))}
         </nav>
@@ -687,7 +691,10 @@ export default function Dashboard() {
           <div className="page-head">
             <div>
               <div className="eyebrow">
-                SAO VIỆT · LONG THÀNH <span className="test-label">TEST</span>
+                SAO VIỆT · LONG THÀNH{" "}
+                <span className="test-label">
+                  {data.localTest ? "TEST" : "NỘI BỘ"}
+                </span>
               </div>
               <h1>
                 {view === "overview"
@@ -702,7 +709,7 @@ export default function Dashboard() {
                     : view === "team"
                       ? "Giao đúng người. Quyền hạn rõ ràng cho từng thành viên."
                       : view === "build"
-                        ? "Tiến độ triển khai thực tế của bản web TEST này."
+                        ? "Tiến độ triển khai thực tế của hệ thống."
                         : "Theo dõi và cập nhật công việc tại một nơi."}
               </p>
             </div>

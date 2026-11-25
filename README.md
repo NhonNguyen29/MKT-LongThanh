@@ -30,17 +30,18 @@ VD05 được gộp trong lịch sử VD01. Social có tổng 3 vị trí/tuần
 
 Nhắc trong web xuất hiện khi truy cập sau giờ cài đặt (mặc định 10:00, giờ Việt Nam), gồm việc đến hạn và chờ duyệt. Thông báo trình duyệt cần được người dùng bật và trang còn mở. Lịch nhắc Codex đã có là một hệ thống riêng, không tự đồng bộ với cài đặt này. Chưa có gửi nhắc khi đóng web qua email/Facebook/Zalo.
 
-## Chuẩn bị Vercel và PostgreSQL
+## Vercel và Supabase — chuẩn bị triển khai online
 
-Chưa kết nối hoặc triển khai Vercel; chưa kiểm thử với PostgreSQL thật. Repo đã có adapter PostgreSQL (`pg`), transaction và khóa để tránh mất cập nhật. Bản TEST lưu một bản trạng thái JSONB, phù hợp đội nhỏ; khi mở rộng cần tách bảng, migration và chính sách lưu nhật ký.
+Người dùng đã duyệt bản TEST và yêu cầu đưa lên Vercel với cơ sở dữ liệu Supabase. Mã kết nối và chuyển dữ liệu đã chuẩn bị; hiện chưa kết nối tài khoản, chưa triển khai online và chưa kiểm thử với PostgreSQL thật. Adapter PostgreSQL (`pg`) dùng transaction và khóa để tránh mất cập nhật. Dữ liệu nằm trong schema riêng `saoviet_private`, không qua Data API công khai. Bản này lưu một trạng thái JSONB, phù hợp đội nhỏ; khi mở rộng cần tách bảng và chính sách lưu nhật ký.
 
 1. Import repo vào Vercel, framework Next.js, root là thư mục repo. Lệnh build `npm run build`.
-2. Cấp cơ sở dữ liệu PostgreSQL. Cấu hình `DATABASE_URL` theo chuỗi kết nối TLS của nhà cung cấp; tài khoản DB cần tạo bảng `mkt_state` khi khởi tạo.
-3. Cấu hình `ADMIN_EMAIL`, `ADMIN_NAME`, `ADMIN_PASSWORD` (ít nhất 12 ký tự, dùng mật khẩu riêng), `LOCAL_TEST_LOGIN=false`. Không commit các giá trị bí mật.
-4. Deploy Preview rồi kiểm tra đăng nhập, tạo nhân viên TEST, giao việc, cập nhật và reload trước khi dùng thật. Bản chạy trên Vercel từ chối lưu filesystem khi thiếu DATABASE_URL.
-5. Lần đầu DB trống sẽ nhập danh sách nguồn và owner mới. Dữ liệu thay đổi trên local **không tự chuyển lên DB**. Khi chuyển dữ liệu cần migration có kiểm tra và sao lưu; không upload `.local/state.json` công khai vì chứa thông tin xác thực.
+2. Tạo/chọn project Supabase dành cho ứng dụng. Dùng URI **Transaction pooler** từ mục Connect, bật TLS theo hướng dẫn kết nối của project. Không tự đoán hostname. Không thêm `saoviet_private` vào exposed schemas. Chi tiết: [Supabase kết nối PostgreSQL](https://supabase.com/docs/guides/database/connecting-to-postgres), [quyền truy cập Data API](https://supabase.com/docs/guides/api/securing-your-api).
+3. Tạo `.env.production.local` (đã được Git bỏ qua), gồm `DATABASE_URL`, `ADMIN_EMAIL` thật, `ADMIN_NAME`, `ADMIN_PASSWORD` mới ít nhất 16 ký tự, `LOCAL_TEST_LOGIN=false`. Không dùng mật khẩu TEST. Sao lưu `.local` trước khi chuyển dữ liệu.
+4. Chạy `npm run db:migrate` để tạo schema riêng và khóa quyền Data API. Sau đó chạy `npm run db:import` để chuyển công việc và sáu tư liệu. Import bỏ hai tài khoản TEST, nhiệm vụ kiểm thử đã biết, các phiên đăng nhập local, đồng thời đổi email/mật khẩu owner. Import từ chối ghi đè DB đã có dữ liệu; mọi thay đổi trong lượt import dùng một transaction.
+5. Đưa các biến môi trường tương ứng vào Vercel phía máy chủ, không đặt tiền tố `NEXT_PUBLIC_`. Bản chạy trên Vercel từ chối lưu filesystem khi thiếu DATABASE_URL; nút đăng nhập TEST luôn tắt. Lệnh `db:migrate`/`db:import` là thao tác quản trị một lần, không đưa vào build command.
+6. Deploy và kiểm tra đăng nhập owner, giao việc/nhân viên, cập nhật, reload, mở tư liệu và chặn truy cập chưa đăng nhập trước khi bàn giao URL. Tài khoản nhân viên thật được chủ trung tâm tạo trong **Nhân sự & phân quyền**; chưa có email mời hoặc quên mật khẩu tự động.
 
-Ảnh lớp học/caption hiện tại chỉ nằm trong `.local/assets` trên máy gốc, truy cập qua API có kiểm tra quyền. Chúng không nằm trong repo, nên chưa mở được trên Vercel. Cần bổ sung lưu trữ tệp riêng và chuyển tư liệu có quyền truy cập trước khi bàn giao online.
+Ảnh lớp học/caption không nằm trong Git. Script import chuyển sáu tệp hiện tại vào `saoviet_private.mkt_assets` (mỗi tệp dưới 4 MB), chỉ đọc qua API ứng dụng sau kiểm tra người dùng và quyền công việc. Runtime vẫn dùng `.local/assets` khi chạy local không có DATABASE_URL. Với thư viện video/tệp lớn trong tương lai, dùng Supabase Storage riêng thay vì bảng bytea hiện tại. Chưa có chức năng tải tư liệu mới lên web.
 
 ## Kiểm tra và tiến trình
 

@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     const res = NextResponse.json({ ok: true });
     res.cookies.set("mkt_session", result.token!, {
       httpOnly: true,
-      secure: req.nextUrl.protocol === "https:",
+      secure: !!process.env.VERCEL || req.nextUrl.protocol === "https:",
       sameSite: "strict",
       path: "/",
       maxAge: 8 * 3600,

@@ -1,34 +1,26 @@
 import { readFile, mkdir, writeFile, rename } from "node:fs/promises";
 import path from "node:path";
-import { Pool } from "pg";
+import { database, databaseUrl } from "./database";
 import type { State } from "./types";
 import { initialState } from "./seed";
 const globalStore = globalThis as typeof globalThis & {
-  mktPool?: Pool;
   mktQueue?: Promise<unknown>;
 };
-export const storageMode = () =>
-  process.env.DATABASE_URL ? "postgres" : "local";
+export const storageMode = () => (databaseUrl() ? "postgres" : "local");
 async function operation<T>(fn: (state: State) => T | Promise<T>): Promise<T> {
-  if (process.env.DATABASE_URL) {
-    const pool = (globalStore.mktPool ??= new Pool({
-      connectionString: process.env.DATABASE_URL,
-      max: 3,
-    }));
+  if (databaseUrl()) {
+    const pool = database();
     const client = await pool.connect();
     try {
-      await client.query(
-        "CREATE TABLE IF NOT EXISTS mkt_state (id integer PRIMARY KEY CHECK (id=1), body jsonb NOT NULL)",
-      );
       await client.query("BEGIN");
       await client.query("SELECT pg_advisory_xact_lock(19472511)");
       let row = await client.query(
-        "SELECT body FROM mkt_state WHERE id=1 FOR UPDATE",
+        "SELECT body FROM saoviet_private.mkt_state WHERE id=1 FOR UPDATE",
       );
       let state: State = row.rows[0]?.body ?? initialState();
       const result = await fn(state);
       await client.query(
-        "INSERT INTO mkt_state(id,body) VALUES (1,$1) ON CONFLICT(id) DO UPDATE SET body=excluded.body",
+        "INSERT INTO saoviet_private.mkt_state(id,body) VALUES (1,$1) ON CONFLICT(id) DO UPDATE SET body=excluded.body",
         [JSON.stringify(state)],
       );
       await client.query("COMMIT");
