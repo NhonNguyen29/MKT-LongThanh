@@ -126,7 +126,7 @@ export function mutate(state: State, user: User, input: unknown) {
     const enteringReview = next.status === "review" && task.status !== "review";
     const enteringDone = next.status === "done" && task.status !== "done";
     if (enteringReview || enteringDone) {
-      validateCompletionProof(next);
+      validateCompletionProof(next, state);
     }
     if (next.status === "done") next.progress = 100;
     if (
@@ -176,6 +176,7 @@ export function mutate(state: State, user: User, input: unknown) {
           "YouTube",
           "SEO Website",
           "Thiết kế",
+          "Kho Media",
           "Vận hành",
         ]),
         assignee: z.string().nullable().default(null),
@@ -185,6 +186,13 @@ export function mutate(state: State, user: User, input: unknown) {
           .nullable()
           .default(null),
         priority: z.enum(["high", "normal", "low"]).default("normal"),
+        mediaFolder: z
+          .object({
+            year: z.number().int().min(2020).max(2040),
+            month: z.number().int().min(1).max(12),
+          })
+          .nullable()
+          .optional(),
       })
       .strict()
       .parse(envelope.payload);
@@ -206,6 +214,7 @@ export function mutate(state: State, user: User, input: unknown) {
       publishedAt: null,
       assignedWeek: p.assignee && !p.dueDate ? weekStart(vietnamDate()) : null,
       proofImage: null,
+      mediaFolder: p.mediaFolder ?? null,
       version: 1,
       archived: false,
       updatedAt: new Date().toISOString(),
@@ -370,12 +379,26 @@ export function snapshot(
       .filter((t) => t.publication === "published" && t.publishedUrl)
       .map((t) => t.platform),
   ).size;
+  const allMedia = state.mediaItems || [];
+  const allowedFolders = new Set(
+    tasks
+      .filter((t) => t.mediaFolder)
+      .map((t) => `${t.mediaFolder!.year}-${t.mediaFolder!.month}`),
+  );
+  const mediaItems = canManage(user)
+    ? allMedia
+    : allMedia.filter(
+        (m) =>
+          m.uploadedById === user.id ||
+          allowedFolders.has(`${m.year}-${m.month}`),
+      );
   return {
     user: (({ passwordHash, ...u }) => u)(user),
     users: state.users
       .map(({ passwordHash, ...u }) => u)
       .filter((u) => canManage(user) || u.id === user.id),
     tasks,
+    mediaItems,
     audit: state.audit
       .filter((a) => canManage(user) || tasks.some((t) => t.id === a.taskId))
       .slice(0, 100),

@@ -237,3 +237,45 @@ test("locking an account revokes its existing session; owner cannot be demoted",
   );
   assert.throws(() => currentUser(s, undefined), { status: 401 });
 });
+test("media folder upload task can be assigned with deadline and requires uploaded file before review/done", () => {
+  const s = state();
+  const thisWeek = weekStart(vietnamDate());
+  mutate(s, owner, {
+    action: "createTask",
+    payload: {
+      title: "Upload hình ảnh đẹp Tháng 11/2026",
+      description: "Upload ảnh và video lớp học",
+      channel: "Kho Media",
+      assignee: employee.id,
+      dueDate: addDays(thisWeek, 3),
+      priority: "high",
+      mediaFolder: { year: 2026, month: 11 },
+    },
+  });
+  const mediaTask = s.tasks[0];
+  assert.equal(mediaTask.channel, "Kho Media");
+  assert.deepEqual(mediaTask.mediaFolder, { year: 2026, month: 11 });
+  // Cannot submit review when folder is empty
+  assert.throws(() => update(s, employee, mediaTask.id, { status: "review" }), {
+    status: 400,
+  });
+  // Add an uploaded image to 2026/11 -> now review & done succeed without publishedUrl
+  s.mediaItems = [
+    {
+      id: "md_test123456",
+      year: 2026,
+      month: 11,
+      kind: "images",
+      name: "lop-hoc-dep.jpg",
+      contentType: "image/jpeg",
+      sizeBytes: 245000,
+      chunkCount: 1,
+      uploadedBy: employee.name,
+      uploadedById: employee.id,
+      uploadedAt: new Date().toISOString(),
+    },
+  ];
+  update(s, employee, mediaTask.id, { status: "review", progress: 90 });
+  update(s, manager, mediaTask.id, { status: "done" });
+  assert.equal(s.tasks[0].status, "done");
+});

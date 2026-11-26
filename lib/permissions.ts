@@ -41,7 +41,17 @@ export function validateProofUrl(raw: string) {
     throw new AppError("Link bài viết phải bắt đầu bằng https://.");
   return url;
 }
-export function validateCompletionProof(t: Task) {
+export function validateCompletionProof(t: Task, state?: State) {
+  if (t.mediaFolder) {
+    const items = (state?.mediaItems || []).filter(
+      (m) => m.year === t.mediaFolder!.year && m.month === t.mediaFolder!.month,
+    );
+    if (items.length === 0)
+      throw new AppError(
+        `Bắt buộc tải lên ít nhất 1 hình ảnh hoặc video vào thư mục Tháng ${String(t.mediaFolder.month).padStart(2, "0")}/${t.mediaFolder.year} trước khi gửi duyệt hoặc xác thực hoàn thành.`,
+      );
+    return;
+  }
   if (!t.proofImage?.url)
     throw new AppError(
       "Bắt buộc tải lên hình chụp màn hình công việc trước khi gửi duyệt hoặc xác thực hoàn thành.",

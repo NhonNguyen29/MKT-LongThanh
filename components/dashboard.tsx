@@ -36,7 +36,9 @@ import {
   PauseCircle,
   Filter,
   Download,
+  Image as ImageIcon,
 } from "lucide-react";
+import { MediaVault } from "@/components/media-vault";
 import type {
   Snapshot,
   Task,
@@ -50,6 +52,7 @@ type View =
   | "tasks"
   | "calendar"
   | "social"
+  | "media"
   | "team"
   | "library"
   | "build"
@@ -78,6 +81,7 @@ const nav = [
   { id: "tasks", title: "Công việc", icon: ListTodo },
   { id: "calendar", title: "Lịch công việc", icon: CalendarDays },
   { id: "social", title: "Social hằng tuần", icon: Globe },
+  { id: "media", title: "Kho Ảnh & Video", icon: ImageIcon },
   { id: "team", title: "Nhân sự & phân quyền", icon: Users },
   { id: "library", title: "Thư viện nội dung", icon: FolderOpen },
   { id: "build", title: "Tiến trình xây dựng", icon: Activity },
@@ -91,6 +95,7 @@ const channels = [
   "YouTube",
   "SEO Website",
   "Thiết kế",
+  "Kho Media",
   "Vận hành",
 ];
 const fmt = (s: string | null) =>
@@ -329,7 +334,10 @@ export default function Dashboard() {
     [toast, setToast] = useState(""),
     [notice, setNotice] = useState(false),
     [mobile, setMobile] = useState(false),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [mediaJump, setMediaJump] = useState<{ year: number; month: number } | null>(
+      null,
+    );
   const load = useCallback(async () => {
     try {
       const r = await fetch("/api/state", { cache: "no-store" });
@@ -1148,6 +1156,21 @@ export default function Dashboard() {
               </section>
             </>
           )}
+          {view === "media" && (
+            <MediaVault
+              key={mediaJump ? `${mediaJump.year}-${mediaJump.month}` : "default"}
+              items={data.mediaItems || []}
+              tasks={data.tasks}
+              users={data.users}
+              currentUserId={data.user.id}
+              manage={manage}
+              busy={busy}
+              initialFolder={mediaJump}
+              onReload={load}
+              onAction={action}
+              onOpenTask={(id) => setSelected(id)}
+            />
+          )}
           {view === "build" && manage && (
             <>
               <div className="build-summary">
@@ -1417,6 +1440,11 @@ export default function Dashboard() {
           onClose={() => setSelected(null)}
           onAction={action}
           onUploaded={load}
+          onOpenMedia={(folder) => {
+            setSelected(null);
+            setMediaJump(folder);
+            setView("media");
+          }}
         />
       )}
       {create && (
@@ -1603,6 +1631,7 @@ function TaskModal({
   onClose,
   onAction,
   onUploaded,
+  onOpenMedia,
 }: {
   task: Task;
   users: SafeUser[];
@@ -1612,6 +1641,7 @@ function TaskModal({
   onClose: () => void;
   onAction: (a: string, p: unknown) => Promise<boolean>;
   onUploaded: () => Promise<void>;
+  onOpenMedia: (folder: { year: number; month: number }) => void;
 }) {
   const [draft, setDraft] = useState({ ...task }),
     [comment, setComment] = useState(""),
@@ -1800,99 +1830,123 @@ function TaskModal({
             </small>
           </label>
         )}
-        <div className="publication-box">
-          <h3>Minh chứng hoàn thành &amp; xuất bản</h3>
-          <p>
-            Bắt buộc tải lên <strong>ảnh chụp màn hình công việc</strong> và nhập{" "}
-            <strong>link bài viết (https://…)</strong> mới được gửi duyệt hoặc xác
-            thực hoàn thành.
-          </p>
-          <div className="form-grid">
-            <label>
-              Link bài viết (bắt buộc khi hoàn thành)
-              <input
-                type="url"
-                placeholder="https://…"
-                value={draft.publishedUrl}
-                disabled={lockedForEmployee}
-                onChange={(e) => field("publishedUrl", e.target.value)}
-                required={
-                  draft.status === "review" ||
-                  draft.status === "done" ||
-                  draft.publication === "published"
-                }
-              />
-            </label>
-            <label>
-              Trạng thái xuất bản
-              <select
-                value={draft.publication}
-                disabled={!manage}
-                onChange={(e) => field("publication", e.target.value)}
-              >
-                {Object.entries(pubs).map(([s, l]) => (
-                  <option key={s} value={s}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </label>
+        {task.mediaFolder ? (
+          <div className="publication-box">
+            <h3>Thư mục Kho Ảnh &amp; Video được giao</h3>
+            <p>
+              Nhiệm vụ này gắn với thư mục{" "}
+              <strong>
+                Tháng {String(task.mediaFolder.month).padStart(2, "0")}/
+                {task.mediaFolder.year}
+              </strong>{" "}
+              (gồm 2 thư mục con Hình ảnh và Video). Cần tải lên ít nhất 1 tệp vào
+              thư mục trước khi gửi duyệt / hoàn thành.
+            </p>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => onOpenMedia(task.mediaFolder!)}
+            >
+              <FolderOpen size={17} /> Mở thư mục Tháng{" "}
+              {String(task.mediaFolder.month).padStart(2, "0")}/
+              {task.mediaFolder.year} để upload
+            </button>
           </div>
-          <div style={{ marginTop: 12 }}>
-            <label>
-              Ảnh chụp màn hình minh chứng (PNG/JPG/WebP, tối đa 3,5 MB)
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                disabled={uploading || lockedForEmployee}
-                onChange={(e) => {
-                  void uploadProof(e.target.files?.[0]);
-                  e.currentTarget.value = "";
-                }}
-              />
-            </label>
-            {uploading && <small>Đang tải ảnh chụp màn hình lên hệ thống…</small>}
-            {uploadError && (
-              <div className="error" role="alert" style={{ marginTop: 6 }}>
-                {uploadError}
-              </div>
-            )}
-            {draft.proofImage?.url ? (
-              <div style={{ marginTop: 10 }}>
-                <a
-                  href={draft.proofImage.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ display: "inline-block" }}
+        ) : (
+          <div className="publication-box">
+            <h3>Minh chứng hoàn thành &amp; xuất bản</h3>
+            <p>
+              Bắt buộc tải lên <strong>ảnh chụp màn hình công việc</strong> và nhập{" "}
+              <strong>link bài viết (https://…)</strong> mới được gửi duyệt hoặc xác
+              thực hoàn thành.
+            </p>
+            <div className="form-grid">
+              <label>
+                Link bài viết (bắt buộc khi hoàn thành)
+                <input
+                  type="url"
+                  placeholder="https://…"
+                  value={draft.publishedUrl}
+                  disabled={lockedForEmployee}
+                  onChange={(e) => field("publishedUrl", e.target.value)}
+                  required={
+                    draft.status === "review" ||
+                    draft.status === "done" ||
+                    draft.publication === "published"
+                  }
+                />
+              </label>
+              <label>
+                Trạng thái xuất bản
+                <select
+                  value={draft.publication}
+                  disabled={!manage}
+                  onChange={(e) => field("publication", e.target.value)}
                 >
-                  <img
-                    src={draft.proofImage.url}
-                    alt="Ảnh chụp màn hình minh chứng"
-                    style={{
-                      maxWidth: "100%",
-                      maxHeight: 220,
-                      borderRadius: 8,
-                      border: "1px solid rgba(15,23,42,0.12)",
-                      display: "block",
-                    }}
-                  />
-                </a>
-                <small style={{ display: "block", marginTop: 4 }}>
-                  Đã tải lên lúc{" "}
-                  {new Date(draft.proofImage.uploadedAt).toLocaleString("vi-VN")}{" "}
-                  ·{" "}
-                  <a href={draft.proofImage.url} target="_blank" rel="noreferrer">
-                    Mở ảnh đầy đủ
+                  {Object.entries(pubs).map(([s, l]) => (
+                    <option key={s} value={s}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <label>
+                Ảnh chụp màn hình minh chứng (PNG/JPG/WebP, tối đa 3,5 MB)
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  disabled={uploading || lockedForEmployee}
+                  onChange={(e) => {
+                    void uploadProof(e.target.files?.[0]);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </label>
+              {uploading && <small>Đang tải ảnh chụp màn hình lên hệ thống…</small>}
+              {uploadError && (
+                <div className="error" role="alert" style={{ marginTop: 6 }}>
+                  {uploadError}
+                </div>
+              )}
+              {draft.proofImage?.url ? (
+                <div style={{ marginTop: 10 }}>
+                  <a
+                    href={draft.proofImage.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ display: "inline-block" }}
+                  >
+                    <img
+                      src={draft.proofImage.url}
+                      alt="Ảnh chụp màn hình minh chứng"
+                      style={{
+                        maxWidth: "100%",
+                        maxHeight: 220,
+                        borderRadius: 8,
+                        border: "1px solid rgba(15,23,42,0.12)",
+                        display: "block",
+                      }}
+                    />
                   </a>
+                  <small style={{ display: "block", marginTop: 4 }}>
+                    Đã tải lên lúc{" "}
+                    {new Date(draft.proofImage.uploadedAt).toLocaleString("vi-VN")}{" "}
+                    ·{" "}
+                    <a href={draft.proofImage.url} target="_blank" rel="noreferrer">
+                      Mở ảnh đầy đủ
+                    </a>
+                  </small>
+                </div>
+              ) : (
+                <small style={{ display: "block", marginTop: 6 }}>
+                  Chưa có ảnh chụp màn hình minh chứng.
                 </small>
-              </div>
-            ) : (
-              <small style={{ display: "block", marginTop: 6 }}>
-                Chưa có ảnh chụp màn hình minh chứng.
-              </small>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        )}
         {task.assets && (
           <div className="asset-links">
             {task.assets.map((a) => (

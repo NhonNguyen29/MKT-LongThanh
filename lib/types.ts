@@ -11,6 +11,22 @@ export type User = {
   passwordHash: string;
 };
 export type SafeUser = Omit<User, "passwordHash">;
+export type MediaKind = "images" | "videos";
+export type MediaItem = {
+  id: string;
+  year: number;
+  month: number; // 1..12
+  kind: MediaKind;
+  name: string;
+  contentType: string;
+  sizeBytes: number;
+  chunkCount: number;
+  uploadedBy: string;
+  uploadedById: string;
+  uploadedAt: string;
+  note?: string;
+  taskId?: string | null;
+};
 export type Task = {
   id: string;
   title: string;
@@ -34,6 +50,7 @@ export type Task = {
   platform?: string;
   assets?: { label: string; url: string }[];
   proofImage?: { url: string; name: string; uploadedAt: string } | null;
+  mediaFolder?: { year: number; month: number } | null;
 };
 export type Audit = {
   id: string;
@@ -46,6 +63,7 @@ export type State = {
   schemaVersion: 1;
   users: User[];
   tasks: Task[];
+  mediaItems?: MediaItem[];
   sessions: { hash: string; userId: string; expires: number }[];
   attempts: Record<string, { count: number; until: number }>;
   audit: Audit[];
@@ -70,6 +88,7 @@ export type Snapshot = {
   user: SafeUser;
   users: SafeUser[];
   tasks: Task[];
+  mediaItems: MediaItem[];
   audit: Audit[];
   notifications: Notification[];
   today: string;
