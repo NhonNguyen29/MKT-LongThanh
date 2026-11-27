@@ -61,6 +61,36 @@ export function mutate(state: State, user: User, input: unknown) {
   const envelope = z
     .object({ action: z.string(), payload: z.unknown() })
     .parse(input);
+  if (envelope.action === "acknowledgeTask") {
+    const p = z
+      .object({ id: z.string(), version: z.number() })
+      .strict()
+      .parse(envelope.payload);
+    const task = state.tasks.find((t) => t.id === p.id);
+    if (!task || !canSee(user, task))
+      throw new AppError("Không tìm thấy công việc được phép truy cập.", 404);
+    if (task.assignee !== user.id)
+      throw new AppError(
+        "Chỉ người được giao mới có thể xác nhận nhận việc.",
+        403,
+      );
+    if (task.archived || ["done", "paused"].includes(task.status))
+      throw new AppError(
+        "Công việc đã đóng hoặc tạm dừng, chưa thể xác nhận nhận việc.",
+      );
+    if (task.version !== p.version)
+      throw new AppError(
+        "Công việc vừa thay đổi. Tải lại và xem nội dung trước khi nhận việc.",
+        409,
+      );
+    if (task.acknowledgedBy === user.id && task.acknowledgedAt) return;
+    task.acknowledgedBy = user.id;
+    task.acknowledgedAt = new Date().toISOString();
+    task.updatedAt = task.acknowledgedAt;
+    task.version++;
+    audit(state, user, "Đã nhận việc " + task.id + ": " + task.title, task.id);
+    return;
+  }
   if (envelope.action === "updateTask") {
     const p = z
       .object({ id: z.string(), version: z.number(), patch: patchSchema })
@@ -113,6 +143,10 @@ export function mutate(state: State, user: User, input: unknown) {
         throw new AppError("Ngày đến hạn không hợp lệ.");
     }
     const next = { ...task, ...p.patch };
+    if (next.assignee !== task.assignee) {
+      next.acknowledgedBy = null;
+      next.acknowledgedAt = null;
+    }
     if (typeof p.patch.publishedUrl === "string")
       next.publishedUrl = p.patch.publishedUrl.trim();
     if (
@@ -377,6 +411,28 @@ export function snapshot(
     }
   }
   const weekTasks = state.tasks.filter((t) => t.week === week);
+  if (canManage(user)) {
+    for (const t of tasks.filter(
+      (t) =>
+        !t.archived &&
+        t.assignee &&
+        t.acknowledgedBy === t.assignee &&
+        t.acknowledgedAt,
+    )) {
+      const id = t.id + "-ack-" + t.acknowledgedAt;
+      notifications.push({
+        id,
+        title: "Nhân viên đã nhận việc",
+        body:
+          (state.users.find((u) => u.id === t.assignee)?.name ||
+            "Người phụ trách") +
+          " · " +
+          t.title,
+        taskId: t.id,
+        read: read.includes(id),
+      });
+    }
+  }
   const completed = new Set(
     weekTasks
       .filter((t) => t.publication === "published" && t.publishedUrl)

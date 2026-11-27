@@ -39,6 +39,12 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { MediaVault } from "@/components/media-vault";
+import { TaskReceipt } from "@/components/task-receipt";
+import {
+  hasAcknowledged,
+  matchesWorkFilter,
+  type WorkFilter,
+} from "@/lib/task-receipt";
 import type {
   Snapshot,
   Task,
@@ -328,6 +334,8 @@ export default function Dashboard() {
     [query, setQuery] = useState(""),
     [statusFilter, setStatusFilter] = useState("all"),
     [channelFilter, setChannelFilter] = useState("all"),
+    [workFilter, setWorkFilter] = useState<WorkFilter>("all"),
+    [assigneeFilter, setAssigneeFilter] = useState("all"),
     [selected, setSelected] = useState<string | null>(null),
     [create, setCreate] = useState(false),
     [newUser, setNewUser] = useState(false),
@@ -411,7 +419,9 @@ export default function Dashboard() {
             ? "Đã lưu công việc. Email đang chờ cấu hình Gmail."
             : d.email?.sent
               ? `Đã lưu công việc; Gmail đã nhận gửi ${d.email.sent} thông báo.`
-              : "Đã lưu thay đổi",
+              : action === "acknowledgeTask"
+                ? "Đã xác nhận nhận việc. Quản lý có thể xem trên web."
+                : "Đã lưu thay đổi",
       );
       return true;
     } catch (e) {
@@ -461,6 +471,8 @@ export default function Dashboard() {
     (t) =>
       (statusFilter === "all" || t.status === statusFilter) &&
       (channelFilter === "all" || t.channel === channelFilter) &&
+      (assigneeFilter === "all" || t.assignee === assigneeFilter) &&
+      matchesWorkFilter(t, workFilter, data.today) &&
       (t.title + " " + t.id + " " + t.description)
         .toLowerCase()
         .includes(query.toLowerCase()),
@@ -473,8 +485,25 @@ export default function Dashboard() {
     setMobile(false);
     setStatusFilter("all");
     setChannelFilter("all");
+    setWorkFilter("all");
+    setAssigneeFilter("all");
     setQuery("");
   };
+  const workFilters: { id: WorkFilter; title: string; hint: string }[] = [
+    { id: "all", title: "Tất cả", hint: "Việc chưa lưu trữ" },
+    ...(manage
+      ? [
+          {
+            id: "unassigned" as const,
+            title: "Cần giao",
+            hint: "Chưa có người phụ trách",
+          },
+        ]
+      : []),
+    { id: "unacknowledged", title: "Chưa nhận", hint: "Cần xác nhận trên web" },
+    { id: "acknowledged", title: "Đã nhận", hint: "Đã xác nhận, chưa đóng" },
+    { id: "overdue", title: "Quá hạn", hint: "Ưu tiên xử lý trước" },
+  ];
   function table(tasks: Task[]) {
     return tasks.length ? (
       <div className="table-wrap">
@@ -518,7 +547,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </td>
-                <td>
+                <td data-label="Người phụ trách">
                   {t.assignee ? (
                     <span className="person">
                       <i>
@@ -534,13 +563,17 @@ export default function Dashboard() {
                     <span className="muted">Chưa phân công</span>
                   )}
                 </td>
-                <td>
-                  <Badge status={t.status} />
+                <td data-label="Trạng thái">
+                  <div className="task-state-stack">
+                    <Badge status={t.status} />
+                    <TaskReceipt task={t} showTime />
+                  </div>
                 </td>
-                <td>
+                <td data-label="Tiến độ">
                   <Progress value={t.progress} />
                 </td>
                 <td
+                  data-label="Hạn xử lý"
                   className={
                     t.dueDate && t.dueDate < data!.today && t.status !== "done"
                       ? "overdue"
@@ -715,7 +748,7 @@ export default function Dashboard() {
               </div>
               <h1>
                 {view === "overview"
-                  ? "Mỗi ngày, một bước tiến."
+                  ? "Rõ người. Rõ việc. Rõ tiến độ."
                   : nav.find((n) => n.id === view)?.title}
               </h1>
               <p>
@@ -746,6 +779,38 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+          {["overview", "tasks"].includes(view) && (
+            <section
+              className="dispatch-strip"
+              aria-label="Theo dõi giao và nhận việc"
+            >
+              {workFilters.map((f) => (
+                <button
+                  key={f.id}
+                  className={
+                    "dispatch-item " +
+                    (view === "tasks" && workFilter === f.id ? "selected" : "")
+                  }
+                  aria-pressed={view === "tasks" && workFilter === f.id}
+                  onClick={() => {
+                    navigate("tasks");
+                    setWorkFilter(f.id);
+                  }}
+                >
+                  <span>{f.title}</span>
+                  <strong>
+                    {
+                      active.filter((t) =>
+                        matchesWorkFilter(t, f.id, data.today),
+                      ).length
+                    }
+                  </strong>
+                  <small>{f.hint}</small>
+                  <ChevronRight size={18} />
+                </button>
+              ))}
+            </section>
+          )}
           {view === "overview" && (
             <>
               <div className="stats">
@@ -858,7 +923,12 @@ export default function Dashboard() {
                       }{" "}
                       công việc đang mở chưa được phân công.
                     </p>
-                    <button onClick={() => navigate("tasks")}>
+                    <button
+                      onClick={() => {
+                        navigate("tasks");
+                        setWorkFilter(manage ? "unassigned" : "unacknowledged");
+                      }}
+                    >
                       Xem danh sách giao việc
                     </button>
                     <div className="focus-shape">
@@ -944,6 +1014,52 @@ export default function Dashboard() {
                   ))}
                 </select>
                 <span className="muted">{filtered.length} công việc</span>
+              </div>
+              <div className="assignment-filters">
+                <label>
+                  Lọc nhận việc
+                  <select
+                    value={workFilter}
+                    onChange={(e) =>
+                      setWorkFilter(e.target.value as WorkFilter)
+                    }
+                  >
+                    {workFilters.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.id === "all" ? "Mọi trạng thái nhận việc" : f.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {manage && (
+                  <label>
+                    Người phụ trách
+                    <select
+                      value={assigneeFilter}
+                      onChange={(e) => setAssigneeFilter(e.target.value)}
+                    >
+                      <option value="all">Tất cả nhân sự</option>
+                      {data.users.map((u) => (
+                        <option value={u.id} key={u.id}>
+                          {u.name}
+                          {u.active ? "" : " · Đã khóa"}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <button
+                  className="text-btn"
+                  onClick={() => {
+                    setQuery("");
+                    setStatusFilter("all");
+                    setChannelFilter("all");
+                    setWorkFilter("all");
+                    setAssigneeFilter("all");
+                  }}
+                >
+                  Xóa bộ lọc
+                </button>
               </div>
               {view === "library" && (
                 <p className="panel-hint">
@@ -1035,6 +1151,7 @@ export default function Dashboard() {
                     </span>
                     <h2>{t.platform}</h2>
                     <Badge status={t.status} />
+                    <TaskReceipt task={t} showTime />
                     <p>
                       {t.assignee
                         ? data.users.find((u) => u.id === t.assignee)?.name
@@ -1587,6 +1704,7 @@ export default function Dashboard() {
         <TaskModal
           key={current.id}
           task={current}
+          currentUserId={data.user.id}
           users={data.users}
           manage={manage}
           busy={busy}
@@ -1778,6 +1896,7 @@ function Stat({
 }
 function TaskModal({
   task,
+  currentUserId,
   users,
   manage,
   busy,
@@ -1788,6 +1907,7 @@ function TaskModal({
   onOpenMedia,
 }: {
   task: Task;
+  currentUserId: string;
   users: SafeUser[];
   manage: boolean;
   busy: boolean;
@@ -1869,6 +1989,47 @@ function TaskModal({
           <Badge status={task.status} />
           <span className="muted">{pubs[task.publication]}</span>
         </div>
+        <section className="receipt-panel" aria-label="Xác nhận nhận việc">
+          <div>
+            <strong>
+              {users.find((u) => u.id === task.assignee)?.name ||
+                "Chưa có người phụ trách"}
+            </strong>
+            <TaskReceipt task={task} showTime />
+            <p>
+              Xác nhận đã xem và nhận trách nhiệm thực hiện. Tiến độ công việc
+              được cập nhật riêng.
+            </p>
+          </div>
+          {task.assignee === currentUserId &&
+            !hasAcknowledged(task) &&
+            !task.archived &&
+            !["done", "paused"].includes(task.status) && (
+              <button
+                type="button"
+                className="primary"
+                disabled={busy}
+                onClick={async () => {
+                  if (
+                    await onAction("acknowledgeTask", {
+                      id: task.id,
+                      version: task.version,
+                    })
+                  )
+                    onClose();
+                }}
+              >
+                <CheckCircle2 size={18} />
+                Đã nhận việc
+              </button>
+            )}
+          {manage &&
+            task.assignee &&
+            task.assignee !== currentUserId &&
+            !hasAcknowledged(task) && (
+              <small>Đang chờ nhân viên bấm “Đã nhận việc”.</small>
+            )}
+        </section>
         <label>
           Tên công việc
           <input
@@ -2139,6 +2300,13 @@ function TaskModal({
               type="button"
               disabled={busy}
               onClick={async () => {
+                if (
+                  !task.archived &&
+                  !window.confirm(
+                    "Lưu trữ công việc này? Bạn có thể khôi phục trong Thư viện nội dung.",
+                  )
+                )
+                  return;
                 if (
                   await onAction("updateTask", {
                     id: task.id,

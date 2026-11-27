@@ -9,6 +9,7 @@ import {
   weeklyRotation,
 } from "../lib/calendar";
 import { tokenHash } from "../lib/security";
+import { hasAcknowledged, matchesWorkFilter } from "../lib/task-receipt";
 import type { State, User } from "../lib/types";
 const owner: User = {
   id: "owner",
@@ -49,6 +50,130 @@ test("VD05 merged into VD01; no imported post is marked published", () => {
     /VD05/,
   );
   assert.ok(s.tasks.every((t) => t.publication !== "published"));
+});
+
+function acknowledge(
+  s: State,
+  u: User,
+  id = "VD01",
+  version = s.tasks.find((t) => t.id === id)!.version,
+) {
+  mutate(s, u, { action: "acknowledgeTask", payload: { id, version } });
+}
+
+test("receipt is explicit, persisted, idempotent and visible to managers independently of progress", () => {
+  const s = state();
+  update(s, owner, "VD01", {
+    assignee: employee.id,
+    dueDate: vietnamDate(),
+    status: "todo",
+    progress: 0,
+  });
+  const t = s.tasks.find((t) => t.id === "VD01")!;
+  assert.equal(hasAcknowledged(t), false);
+  acknowledge(s, employee);
+  assert.equal(t.acknowledgedBy, employee.id);
+  assert.ok(t.acknowledgedAt);
+  assert.equal(t.status, "todo");
+  assert.equal(t.progress, 0);
+  const version = t.version,
+    count = s.audit.length;
+  acknowledge(s, employee);
+  assert.equal(t.version, version);
+  assert.equal(s.audit.length, count);
+  const reload = JSON.parse(JSON.stringify(s)) as State;
+  const view = snapshot(reload, manager, "local", true);
+  assert.equal(
+    view.tasks.find((t) => t.id === "VD01")!.acknowledgedAt,
+    t.acknowledgedAt,
+  );
+  const notification = view.notifications.find(
+    (n) => n.title === "Nhân viên đã nhận việc",
+  )!;
+  assert.ok(notification);
+  mutate(s, manager, {
+    action: "readNotifications",
+    payload: { ids: [notification.id] },
+  });
+  update(s, employee, t.id, { status: "doing", progress: 15 });
+  assert.ok(
+    snapshot(s, manager, "local", true).notifications.find(
+      (n) => n.id === notification.id,
+    )?.read,
+  );
+});
+
+test("receipt cannot be forged by manager, another assignee or a stale assignment", () => {
+  const s = state();
+  update(s, owner, "VD01", {
+    assignee: employee.id,
+    dueDate: vietnamDate(),
+    status: "todo",
+  });
+  const t = s.tasks.find((t) => t.id === "VD01")!;
+  assert.throws(() => acknowledge(s, owner), { status: 403 });
+  assert.throws(() => acknowledge(s, manager), { status: 403 });
+  assert.throws(() =>
+    update(s, owner, t.id, {
+      acknowledgedAt: new Date().toISOString(),
+      acknowledgedBy: employee.id,
+    }),
+  );
+  const stale = t.version;
+  update(s, owner, t.id, { assignee: manager.id });
+  assert.throws(() => acknowledge(s, employee, t.id, stale), { status: 404 });
+  update(s, owner, t.id, { assignee: employee.id });
+  assert.throws(() => acknowledge(s, employee, t.id, stale), { status: 409 });
+  acknowledge(s, employee);
+  update(s, owner, t.id, { title: "Bổ sung hướng dẫn" });
+  assert.ok(hasAcknowledged(t));
+  update(s, owner, t.id, { assignee: null });
+  assert.equal(t.acknowledgedAt, null);
+  assert.equal(t.acknowledgedBy, null);
+  update(s, owner, t.id, { assignee: employee.id });
+  assert.equal(hasAcknowledged(t), false);
+});
+
+test("closed, paused, archived and future-week tasks cannot be acknowledged", () => {
+  for (const patch of [
+    { status: "done" },
+    { status: "paused" },
+    { archived: true },
+    { dueDate: addDays(weekStart(vietnamDate()), 8) },
+  ]) {
+    const s = state();
+    update(s, owner, "VD01", {
+      assignee: employee.id,
+      dueDate: vietnamDate(),
+      status: "todo",
+      ...patch,
+    });
+    assert.throws(() => acknowledge(s, employee));
+    assert.equal(hasAcknowledged(s.tasks.find((t) => t.id === "VD01")!), false);
+  }
+});
+
+test("dispatch filters separate unassigned, unconfirmed and confirmed work without treating legacy progress as receipt", () => {
+  const s = state(),
+    t = s.tasks.find((t) => t.id === "VD01")!,
+    today = vietnamDate();
+  update(s, owner, t.id, {
+    assignee: null,
+    status: "doing",
+    progress: 50,
+    dueDate: addDays(today, -1),
+  });
+  assert.ok(matchesWorkFilter(t, "unassigned", today));
+  assert.equal(matchesWorkFilter(t, "unacknowledged", today), false);
+  update(s, owner, t.id, { assignee: employee.id, dueDate: today });
+  assert.ok(matchesWorkFilter(t, "unacknowledged", today));
+  assert.equal(matchesWorkFilter(t, "overdue", today), false);
+  acknowledge(s, employee);
+  assert.ok(matchesWorkFilter(t, "acknowledged", today));
+  assert.equal(matchesWorkFilter(t, "unacknowledged", today), false);
+  update(s, owner, t.id, { status: "done" });
+  assert.equal(matchesWorkFilter(t, "acknowledged", today), false);
+  assert.ok(hasAcknowledged(t));
 });
 test("Vietnam midnight, Monday weeks and rotation cover eleven platforms", () => {
   assert.equal(vietnamDate(new Date("2026-11-24T18:00Z")), "2026-11-25");

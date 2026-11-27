@@ -69,3 +69,13 @@ npm run build
 `test:api` cần máy chủ development local đang chạy. Kiểm tra HTTP đăng nhập ba vai trò, chống yêu cầu khác origin, lọc dữ liệu, tải lại và thu hồi phiên; không đổi công việc thật. Unit tests kiểm tra quyền sửa, phiên bản xung đột, khóa tài khoản, gộp VD05, ngày Việt Nam, social luân phiên và URL. GitHub Actions chạy typecheck, unit tests và build.
 
 Mục **Tiến trình xây dựng** đọc `data/build-progress.json`. Khi hoàn thành một hạng mục, cập nhật tệp này theo kết quả thật, commit và deploy để phản ánh lên web. Tiến độ các công việc Marketing được cập nhật ngay trong ứng dụng, lưu trên máy chủ và tải lại mỗi 20 giây. Người dùng cần duyệt bản TEST trước khi triển khai rộng.
+
+### Bản TEST nhận việc & giao diện Sunset — 27/11/2026
+
+Nhân viên mở công việc và bấm **Đã nhận việc** để xác nhận trách nhiệm. Xác nhận này độc lập với trạng thái Đang làm/Hoàn thành, không yêu cầu ảnh minh chứng hay URL. Chỉ người được giao đang có quyền xem mới được xác nhận; quản lý không nhận thay nhân viên. Máy chủ lưu người nhận, thời gian Việt Nam và nhật ký; lần bấm lặp không tạo thêm xác nhận. Đổi hoặc bỏ người phụ trách sẽ xóa xác nhận hiện hành, giữ lịch sử trong nhật ký. Những công việc cũ chưa có xác nhận không được tự đánh dấu đã nhận.
+
+Quản lý xem tên/thời gian trong bảng, modal, social và thông báo trong web. Bộ lọc **Cần giao / Chưa nhận / Đã nhận / Quá hạn** chỉ tính việc chưa đóng, chưa tạm dừng, chưa lưu trữ; **Tất cả** giữ toàn bộ việc chưa lưu trữ. Có lọc theo nhân viên và xóa bộ lọc. Mobile hiển thị thẻ công việc; màu tím–hồng–cam và logo nền trắng.
+
+Đây là bản TEST chờ người dùng duyệt, chưa cập nhật production. Không có xóa vĩnh viễn; lưu trữ có hộp xác nhận và có thể khôi phục. Đề xuất tiếp theo: Thùng rác khôi phục, giao nhiều việc một lần và nhắc riêng việc chưa nhận.
+
+Kiểm tra: 24 test đạt; TypeScript và production build đạt. Luồng trình duyệt local đã xác minh: tạo việc → nhân viên nhận → reload → quản lý thấy tên/thời gian, bộ đếm và thông báo. Kiểm tra desktop 1440px và mobile 390px; console không có lỗi. Dữ liệu TEST local, không gửi Gmail thật và không sửa dữ liệu online.

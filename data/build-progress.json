@@ -30,7 +30,7 @@
   {
     "id": "qa",
     "title": "Kiểm thử bản TEST",
-    "detail": "20 kiểm thử đạt, gồm Gmail và hồi quy giao việc social đã lưu trữ; build và kiểm tra TypeScript đạt. Đã thử API ba vai trò và bố cục desktop/mobile.",
+    "detail": "24 kiểm thử đạt, gồm phân quyền nhận việc, giao lại, chống xác nhận giả, Gmail và social. Đã thử nhân viên bấm nhận → quản lý xem tên/thời gian, cùng giao diện desktop 1440px và mobile 390px.",
     "status": "done",
     "updatedAt": "2026-11-25"
   },
@@ -47,6 +47,13 @@
     "detail": "Đã triển khai online tại https://mkt-longthanh.vercel.app kết nối PostgreSQL Supabase (schema riêng saoviet_private, RLS bật). Đã nạp 26 công việc + 6 tư liệu riêng tư, loại tài khoản TEST và kiểm tra đăng nhập/phân quyền/tải tư liệu thực tế.",
     "status": "done",
     "updatedAt": "2026-11-25"
+  },
+  {
+    "id": "receipt-sunset",
+    "title": "Nhận việc & giao diện Sunset — bản TEST",
+    "detail": "Đã hoàn thành bản TEST local: xác nhận nhận việc, thông báo quản lý, bộ lọc giao/nhận/người phụ trách và thẻ công việc trên điện thoại. CHỜ DUYỆT giao diện trước khi cập nhật web chính thức. Chưa triển khai Thùng rác hoặc xóa vĩnh viễn.",
+    "status": "doing",
+    "updatedAt": "2026-11-27"
   },
   {
     "id": "external",

@@ -36,6 +36,8 @@ export type Task = {
   status: Status;
   publication: Publication;
   assignee: string | null;
+  acknowledgedBy?: string | null;
+  acknowledgedAt?: string | null;
   dueDate: string | null;
   progress: number;
   publishedUrl: string;
