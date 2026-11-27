@@ -50,9 +50,9 @@
   },
   {
     "id": "receipt-sunset",
-    "title": "Nhận việc & giao diện Sunset — bản TEST",
-    "detail": "Đã hoàn thành bản TEST local: xác nhận nhận việc, thông báo quản lý, bộ lọc giao/nhận/người phụ trách và thẻ công việc trên điện thoại. CHỜ DUYỆT giao diện trước khi cập nhật web chính thức. Chưa triển khai Thùng rác hoặc xóa vĩnh viễn.",
-    "status": "doing",
+    "title": "Nhận việc & giao diện Sunset",
+    "detail": "Đã được người dùng duyệt ngày 27/11. Nhận việc có tên/thời gian/thông báo, bộ lọc giao/nhận/người phụ trách và thẻ trên điện thoại. 24 kiểm thử và kiểm tra trình duyệt đạt.",
+    "status": "done",
     "updatedAt": "2026-11-27"
   },
   {

@@ -76,6 +76,6 @@ Nhân viên mở công việc và bấm **Đã nhận việc** để xác nhận
 
 Quản lý xem tên/thời gian trong bảng, modal, social và thông báo trong web. Bộ lọc **Cần giao / Chưa nhận / Đã nhận / Quá hạn** chỉ tính việc chưa đóng, chưa tạm dừng, chưa lưu trữ; **Tất cả** giữ toàn bộ việc chưa lưu trữ. Có lọc theo nhân viên và xóa bộ lọc. Mobile hiển thị thẻ công việc; màu tím–hồng–cam và logo nền trắng.
 
-Đây là bản TEST chờ người dùng duyệt, chưa cập nhật production. Không có xóa vĩnh viễn; lưu trữ có hộp xác nhận và có thể khôi phục. Đề xuất tiếp theo: Thùng rác khôi phục, giao nhiều việc một lần và nhắc riêng việc chưa nhận.
+Người dùng đã duyệt bản TEST ngày 27/11/2026 và yêu cầu triển khai production. Không có xóa vĩnh viễn; lưu trữ có hộp xác nhận và có thể khôi phục. Đề xuất tiếp theo: Thùng rác khôi phục, giao nhiều việc một lần và nhắc riêng việc chưa nhận.
 
 Kiểm tra: 24 test đạt; TypeScript và production build đạt. Luồng trình duyệt local đã xác minh: tạo việc → nhân viên nhận → reload → quản lý thấy tên/thời gian, bộ đếm và thông báo. Kiểm tra desktop 1440px và mobile 390px; console không có lỗi. Dữ liệu TEST local, không gửi Gmail thật và không sửa dữ liệu online.
