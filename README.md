@@ -1,6 +1,6 @@
 # Sao Việt Marketing Hub — bản TEST
 
-Web quản lý Marketing Long Thành, dùng Next.js App Router. Bản TEST đã có đăng nhập, phân quyền tại máy chủ, giao việc, tiến độ, nhận xét, nhật ký, lịch, thư viện và social luân phiên. Không tự xuất bản nội dung hoặc gửi email/Facebook/Zalo.
+Web quản lý Marketing Long Thành, dùng Next.js App Router. Có đăng nhập, phân quyền tại máy chủ, giao việc, tiến độ, nhận xét, nhật ký, lịch, thư viện và social luân phiên. Gmail gửi thông báo công việc khi cấu hình; không tự xuất bản nội dung lên các kênh.
 
 ## Chạy trên máy
 
@@ -30,7 +30,19 @@ Trạng thái sản xuất tách riêng Bản nháp / Đã duyệt / Đã bàn g
 
 VD05 được gộp trong lịch sử VD01. Social có tổng 3 vị trí/tuần, mỗi vị trí một nền tảng khác nhau, luân phiên 11 nền tảng từ tuần 23/11/2026. Quản lý có thể đổi nền tảng khi phù hợp nhưng không trùng trong tuần. Gravatar cần đối chiếu loại nội dung phù hợp. Tumblr giữ ghi chú fake IP, web không đổi cấu hình mạng. Tuần mới và việc rà ngày mới được tạo khi truy cập, không phải một tác vụ chạy nền độc lập.
 
-Nhắc trong web xuất hiện khi truy cập sau giờ cài đặt (mặc định 10:00, giờ Việt Nam), gồm việc đến hạn và chờ duyệt. Thông báo trình duyệt cần được người dùng bật và trang còn mở. Lịch nhắc Codex đã có là một hệ thống riêng, không tự đồng bộ với cài đặt này. Chưa có gửi nhắc khi đóng web qua email/Facebook/Zalo.
+Nhắc trong web xuất hiện khi truy cập sau giờ cài đặt, gồm việc đến hạn và chờ duyệt. Thông báo trình duyệt cần được bật và trang còn mở. Lịch nhắc Codex là hệ thống riêng. Email Gmail chạy trên máy chủ theo lịch 09:00 giờ Việt Nam trong `vercel.json`, độc lập với giờ nhắc trong web; không cần mở trình duyệt. Facebook/Zalo chưa tích hợp.
+
+## Thông báo Gmail
+
+- Khi giao hoặc đổi người phụ trách: báo người được giao.
+- Khi nhân viên chuyển sang Chờ duyệt: báo chủ trung tâm và quản lý đang hoạt động.
+- Khi quản lý yêu cầu sửa hoặc nghiệm thu: báo nhân viên phụ trách.
+- Nhắc hằng ngày chỉ gửi nếu có việc đang mở phù hợp quyền/tuần; không nhắc việc hoàn thành, tạm dừng, lưu trữ hoặc đang chờ quản lý duyệt.
+- Trong **Cài đặt & nhắc nhở**, quản lý có nút gửi nhắc ngay, gửi kiểm tra về chính email của mình và nhật ký gửi. Chủ trung tâm có thể gửi lại lượt lỗi sau khi kiểm tra hộp thư để tránh trùng.
+
+Cấu hình biến bí mật `GMAIL_APP_PASSWORD`, `CRON_SECRET` và biến `GMAIL_USER`, `APP_URL` trên Vercel Production. Không bật gửi Gmail cho Preview. Google App Password khác mật khẩu đăng nhập web/Gmail chính; xem [hướng dẫn Google](https://support.google.com/accounts/answer/185833). Cron từ chối yêu cầu khi thiếu hoặc sai secret.
+
+Sự kiện email được ghi cùng transaction lưu việc, rồi gửi có chờ kết quả. Lỗi Gmail không hủy công việc đã lưu. Mỗi lượt nhắc ngày chỉ có một khóa cho một người nhận; thao tác gửi nhắc thủ công được chống lặp trong cùng khung 5 phút. Hệ thống kiểm tra lại tài khoản và quyền công việc trước khi gửi. SMTP chấp nhận email được ghi **Gmail đã nhận gửi**, không khẳng định vào Inbox hoặc đã đọc. Lượt SMTP thất bại cần người quản lý kiểm tra trước khi gửi lại; lượt đang gửi bị ngắt không tự gửi lại vì có thể gây trùng. Lịch Vercel chạy theo khả năng gói dịch vụ, không cam kết đúng tuyệt đối từng phút.
 
 ## Vercel và Supabase — chuẩn bị triển khai online
 

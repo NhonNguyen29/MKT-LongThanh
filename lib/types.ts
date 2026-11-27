@@ -64,6 +64,7 @@ export type State = {
   users: User[];
   tasks: Task[];
   mediaItems?: MediaItem[];
+  emailLog?: EmailEvent[];
   sessions: { hash: string; userId: string; expires: number }[];
   attempts: Record<string, { count: number; until: number }>;
   audit: Audit[];
@@ -76,6 +77,18 @@ export type BuildStep = {
   detail: string;
   status: "done" | "doing" | "pending";
   updatedAt: string;
+};
+export type EmailEvent = {
+  id: string;
+  key: string;
+  kind:
+    "assigned" | "review" | "changes" | "done" | "daily" | "manual" | "test";
+  recipientId: string;
+  taskId?: string;
+  status: "pending" | "sending" | "sent" | "failed" | "skipped";
+  createdAt: string;
+  updatedAt: string;
+  error?: string;
 };
 export type Notification = {
   id: string;
@@ -103,4 +116,5 @@ export type Snapshot = {
   localTest: boolean;
   gmailConfigured: boolean;
   gmailSender: string;
+  emailLog: (EmailEvent & { recipientName: string })[];
 };

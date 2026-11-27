@@ -51,8 +51,8 @@
   {
     "id": "external",
     "title": "Nhắc qua email, Facebook, Zalo",
-    "detail": "Giai đoạn sau; chưa kết nối và chưa gửi thông báo ra ngoài.",
-    "status": "pending",
-    "updatedAt": "2026-11-25"
+    "detail": "Đã bổ sung Gmail: giao việc, chờ duyệt, phản hồi, nhắc hằng ngày và nhật ký. Đã cấu hình bí mật; đang kiểm tra gửi thực tế. Facebook/Zalo chưa kết nối.",
+    "status": "doing",
+    "updatedAt": "2026-11-27"
   }
 ]

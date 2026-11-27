@@ -404,7 +404,15 @@ export default function Dashboard() {
       const d = await r.json();
       if (!r.ok) throw Error(d.error);
       await load();
-      setToast("Đã lưu thay đổi");
+      setToast(
+        d.email?.failed
+          ? "Đã lưu công việc. Email chưa gửi được; xem nhật ký Gmail."
+          : d.email && !d.email.configured
+            ? "Đã lưu công việc. Email đang chờ cấu hình Gmail."
+            : d.email?.sent
+              ? `Đã lưu công việc; Gmail đã nhận gửi ${d.email.sent} thông báo.`
+              : "Đã lưu thay đổi",
+      );
       return true;
     } catch (e) {
       setToast((e as Error).message);
@@ -1279,24 +1287,25 @@ export default function Dashboard() {
               </section>
               <section className="panel settings-card">
                 <Globe size={25} />
-                <h2>Thông báo qua Gmail</h2>
+                <h2>Thông báo công việc qua Gmail</h2>
                 <p>
-                  Tự động gửi email báo việc mới khi giao việc và nhắc việc hằng
-                  ngày lúc {data.settings.reminderTime} từ{" "}
+                  Báo giao việc, kết quả chờ duyệt, yêu cầu sửa và nghiệm thu.
+                  Lịch email nhắc việc hằng ngày: 09:00 giờ Việt Nam, độc lập
+                  với giờ nhắc trong web. Gửi từ{" "}
                   <strong>{data.gmailSender}</strong>.
                 </p>
                 <div className="integration">
                   <strong>Gmail nhân viên</strong>
                   <span>
                     {data.gmailConfigured
-                      ? "Đã kết nối"
+                      ? "Đã cấu hình"
                       : "Chưa cấu hình App Password"}
                   </span>
                 </div>
                 {manage && (
                   <button
                     className="primary"
-                    disabled={busy}
+                    disabled={busy || !data.gmailConfigured}
                     onClick={async () => {
                       setBusy(true);
                       try {
@@ -1304,17 +1313,22 @@ export default function Dashboard() {
                           method: "POST",
                         });
                         const d = await r.json();
+                        await load();
                         if (!r.ok) {
                           setToast(
                             d.error || "Không gửi được email nhắc việc.",
                           );
+                        } else if (d.failed) {
+                          setToast(
+                            `Gmail đã nhận ${d.sent} email; ${d.failed} email lỗi. Xem nhật ký bên dưới.`,
+                          );
                         } else if (d.sent === 0) {
                           setToast(
-                            "Hiện không có nhân viên nào có việc cần nhắc.",
+                            "Không có việc cần nhắc hoặc lượt nhắc này đã được gửi trong 5 phút vừa qua.",
                           );
                         } else {
                           setToast(
-                            `Đã gửi email nhắc việc đến ${d.sent} nhân viên (${d.recipients.join(", ")}).`,
+                            `Gmail đã nhận gửi ${d.sent} email nhắc việc.`,
                           );
                         }
                       } catch {
@@ -1326,6 +1340,136 @@ export default function Dashboard() {
                   >
                     Gửi email nhắc việc cho nhân viên ngay
                   </button>
+                )}
+                {manage && (
+                  <button
+                    className="secondary"
+                    disabled={busy || !data.gmailConfigured}
+                    style={{ marginTop: 12 }}
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        const r = await fetch("/api/notify", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ mode: "test" }),
+                        });
+                        const d = await r.json();
+                        await load();
+                        setToast(
+                          !r.ok
+                            ? d.error
+                            : d.failed
+                              ? "Gửi thử thất bại. Xem nhật ký Gmail."
+                              : d.sent
+                                ? "Gmail đã nhận email kiểm tra gửi tới tài khoản của bạn."
+                                : "Lượt kiểm tra này đã được gửi trong phút vừa qua.",
+                        );
+                      } catch {
+                        setToast(
+                          "Chưa xác nhận được kết quả gửi. Xem nhật ký trước khi thử lại.",
+                        );
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    Gửi email kiểm tra cho tôi
+                  </button>
+                )}
+                {manage && (
+                  <div style={{ marginTop: 20 }}>
+                    <h3>Nhật ký gửi Gmail</h3>
+                    <p className="muted">
+                      “Gmail đã nhận gửi” xác nhận máy chủ SMTP chấp nhận email,
+                      chưa xác nhận người nhận đã đọc hoặc thư vào Inbox.
+                    </p>
+                    {!(data.emailLog || []).length && <p>Chưa có lượt gửi.</p>}
+                    {(data.emailLog || []).slice(0, 15).map((e) => (
+                      <div key={e.id} className="comment">
+                        <strong>
+                          {e.recipientName} ·{" "}
+                          {
+                            {
+                              assigned: "Giao việc",
+                              review: "Chờ duyệt",
+                              changes: "Cần sửa",
+                              done: "Nghiệm thu",
+                              daily: "Nhắc hằng ngày",
+                              manual: "Nhắc thủ công",
+                              test: "Kiểm tra Gmail",
+                            }[e.kind]
+                          }
+                        </strong>
+                        <p>
+                          {
+                            {
+                              pending: "Đang chờ gửi",
+                              sending: "Đang gửi / chờ xác nhận",
+                              sent: "Gmail đã nhận gửi",
+                              failed: "Gửi lỗi",
+                              skipped:
+                                "Đã bỏ qua vì công việc hoặc quyền đã thay đổi",
+                            }[e.status]
+                          }
+                          {e.taskId ? " · " + e.taskId : ""}
+                        </p>
+                        {e.error && <p>{e.error}</p>}
+                        <small>
+                          {new Date(e.updatedAt).toLocaleString("vi-VN", {
+                            timeZone: "Asia/Ho_Chi_Minh",
+                          })}
+                        </small>
+                        {owner && ["failed", "pending"].includes(e.status) && (
+                          <button
+                            className="text-btn"
+                            disabled={busy || !data.gmailConfigured}
+                            onClick={async () => {
+                              if (
+                                e.status === "failed" &&
+                                !window.confirm(
+                                  "Kiểm tra hộp thư trước để tránh gửi trùng. Bạn muốn gửi lại email này?",
+                                )
+                              )
+                                return;
+                              setBusy(true);
+                              try {
+                                const r = await fetch("/api/notify", {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({
+                                    mode: "retry",
+                                    id: e.id,
+                                  }),
+                                });
+                                const d = await r.json();
+                                await load();
+                                setToast(
+                                  !r.ok
+                                    ? d.error
+                                    : d.failed
+                                      ? "Chưa gửi được. Xem nhật ký."
+                                      : d.sent
+                                        ? "Gmail đã nhận gửi email."
+                                        : "Không còn lượt gửi phù hợp.",
+                                );
+                              } catch {
+                                setToast(
+                                  "Chưa xác nhận kết quả. Hãy kiểm tra nhật ký.",
+                                );
+                              } finally {
+                                setBusy(false);
+                              }
+                            }}
+                          >
+                            Gửi lại
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </section>
               <section className="panel settings-card">

@@ -415,5 +415,15 @@ export function snapshot(
     localTest,
     gmailConfigured: isGmailConfigured(),
     gmailSender: gmailSenderEmail(),
+    emailLog: canManage(user)
+      ? (state.emailLog || [])
+          .slice(0, 30)
+          .map((e) => ({
+            ...e,
+            recipientName:
+              state.users.find((u) => u.id === e.recipientId)?.name ||
+              "Tài khoản đã đóng",
+          }))
+      : [],
   };
 }
