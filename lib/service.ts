@@ -139,10 +139,13 @@ export function mutate(state: State, user: User, input: unknown) {
       )
     )
       throw new AppError("Ba bài trong tuần phải dùng ba nền tảng khác nhau.");
-    if (next.week && next.archived)
+    if (next.week && p.patch.archived === true)
       throw new AppError(
         "Giữ ba vị trí social của tuần; dùng trạng thái Tạm dừng thay vì lưu trữ.",
       );
+    // Legacy weekly slots may already be archived. Assigning one must make
+    // it actionable again, and unrelated edits must not be treated as archival.
+    if (next.week && p.patch.assignee) next.archived = false;
     if (
       next.publication === "published" &&
       task.publication !== "published" &&
@@ -416,14 +419,12 @@ export function snapshot(
     gmailConfigured: isGmailConfigured(),
     gmailSender: gmailSenderEmail(),
     emailLog: canManage(user)
-      ? (state.emailLog || [])
-          .slice(0, 30)
-          .map((e) => ({
-            ...e,
-            recipientName:
-              state.users.find((u) => u.id === e.recipientId)?.name ||
-              "Tài khoản đã đóng",
-          }))
+      ? (state.emailLog || []).slice(0, 30).map((e) => ({
+          ...e,
+          recipientName:
+            state.users.find((u) => u.id === e.recipientId)?.name ||
+            "Tài khoản đã đóng",
+        }))
       : [],
   };
 }

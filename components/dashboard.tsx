@@ -2133,7 +2133,7 @@ function TaskModal({
           </div>
         )}
         <div className="modal-actions">
-          {manage && !task.week && (
+          {manage && (!task.week || task.archived) && (
             <button
               className="text-btn"
               type="button"

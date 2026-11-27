@@ -23,14 +23,14 @@
   {
     "id": "weekly",
     "title": "Social luân phiên & nhắc hằng ngày",
-    "detail": "Ba nền tảng khác nhau mỗi tuần; tính kết quả theo URL đã xuất bản.",
+    "detail": "Ba nền tảng khác nhau mỗi tuần; tính kết quả theo URL đã xuất bản. Đã sửa lỗi giao việc social có cờ lưu trữ cũ, cho phép khôi phục và tự mở lại khi giao cho nhân viên.",
     "status": "done",
     "updatedAt": "2026-11-25"
   },
   {
     "id": "qa",
     "title": "Kiểm thử bản TEST",
-    "detail": "9 kiểm thử nghiệp vụ, API ba vai trò, typecheck và build đạt. Đã thử giao việc → nhân viên gửi duyệt → reload, bố cục desktop/mobile.",
+    "detail": "20 kiểm thử đạt, gồm Gmail và hồi quy giao việc social đã lưu trữ; build và kiểm tra TypeScript đạt. Đã thử API ba vai trò và bố cục desktop/mobile.",
     "status": "done",
     "updatedAt": "2026-11-25"
   },

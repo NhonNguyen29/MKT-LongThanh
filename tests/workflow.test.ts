@@ -244,6 +244,38 @@ test("social slots reject duplicate platforms, unapproved publishing and mismatc
   });
   assert.ok(a.publishedAt);
 });
+test("legacy archived social slots can be edited, restored and assigned without losing weekly slots", () => {
+  for (const actor of [owner, manager]) {
+    const s = state();
+    ensureRecurring(s);
+    const slots = s.tasks.filter((t) => t.week === weekStart(vietnamDate()));
+    const a = slots[0];
+    a.archived = true;
+    update(s, actor, a.id, { title: "Nội dung social mới" });
+    assert.equal(a.title, "Nội dung social mới");
+    assert.equal(a.archived, true);
+    update(s, actor, a.id, { archived: false });
+    assert.equal(a.archived, false);
+    a.archived = true;
+    update(s, actor, a.id, { assignee: employee.id, status: "doing" });
+    assert.equal(a.archived, false);
+    assert.ok(
+      snapshot(s, employee, "local", false).tasks.some(
+        (t) => t.id === a.id && !t.archived,
+      ),
+    );
+    update(s, employee, a.id, { progress: 25 });
+    assert.equal(a.progress, 25);
+    assert.throws(() => update(s, actor, a.id, { archived: true }));
+    assert.throws(() =>
+      update(s, actor, a.id, { platform: slots[1].platform }),
+    );
+    update(s, actor, a.id, { status: "paused" });
+    ensureRecurring(s);
+    assert.equal(s.tasks.filter((t) => t.week === a.week).length, 3);
+  }
+});
+
 test("locking an account revokes its existing session; owner cannot be demoted", () => {
   const s = state();
   s.sessions.push({
