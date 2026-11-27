@@ -51,7 +51,7 @@
   {
     "id": "external",
     "title": "Nhắc qua email, Facebook, Zalo",
-    "detail": "Đã bổ sung Gmail: giao việc, chờ duyệt, phản hồi, nhắc hằng ngày và nhật ký. Đã cấu hình bí mật; đang kiểm tra gửi thực tế. Facebook/Zalo chưa kết nối.",
+    "detail": "Gmail đã kết nối: báo giao việc, chờ duyệt, phản hồi và nhắc 09:00 hằng ngày (giờ Việt Nam). Đã gửi 1 email kiểm tra tới chủ trung tâm, Gmail chấp nhận gửi và nhật ký ghi thành công. Có chống gửi lặp và gửi lại khi lỗi. Facebook/Zalo chưa kết nối.",
     "status": "doing",
     "updatedAt": "2026-11-27"
   }
