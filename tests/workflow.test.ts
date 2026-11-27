@@ -77,9 +77,15 @@ test("recurring generation is idempotent and preserves unfinished work", () => {
 test("employee only sees assigned work in current week and requires screenshot + link for review/done", () => {
   const s = state();
   const thisWeek = weekStart(vietnamDate());
-  update(s, manager, "VD01", { assignee: employee.id, dueDate: addDays(thisWeek, 2) });
+  update(s, manager, "VD01", {
+    assignee: employee.id,
+    dueDate: addDays(thisWeek, 2),
+  });
   // Assign another task in NEXT week -> employee must NOT see it
-  update(s, manager, "VD03", { assignee: employee.id, dueDate: addDays(thisWeek, 9) });
+  update(s, manager, "VD03", {
+    assignee: employee.id,
+    dueDate: addDays(thisWeek, 9),
+  });
   assert.throws(() => update(s, employee, "VD02", { progress: 50 }), {
     status: 404,
   });
@@ -121,22 +127,15 @@ test("employee only sees assigned work in current week and requires screenshot +
   assert.equal(view.build.length, 0);
   assert.ok(!JSON.stringify(view).includes("passwordHash"));
 });
-test("manager can assign and accept work with proof but cannot manage accounts or reminder settings", () => {
+test("manager can assign and accept work without proof but cannot manage accounts or reminder settings", () => {
   const s = state();
   const thisWeek = weekStart(vietnamDate());
-  update(s, manager, "VD01", { assignee: employee.id, dueDate: addDays(thisWeek, 1) });
-  // Cannot mark done without proof screenshot & link
-  assert.throws(() => update(s, manager, "VD01", { status: "done" }), {
-    status: 400,
+  update(s, manager, "VD01", {
+    assignee: employee.id,
+    dueDate: addDays(thisWeek, 1),
   });
-  s.tasks.find((t) => t.id === "VD01")!.proofImage = {
-    url: "/api/assets/proof-VD01-test.png",
-    name: "proof-VD01-test.png",
-    uploadedAt: new Date().toISOString(),
-  };
   update(s, manager, "VD01", {
     status: "done",
-    publishedUrl: "https://www.tiktok.com/@saoviet/video/123",
   });
   assert.equal(s.tasks.find((t) => t.id === "VD01")!.progress, 100);
   for (const action of ["createUser", "updateUser", "settings"])
@@ -155,6 +154,29 @@ test("manager can assign and accept work with proof but cannot manage accounts o
     { status: 403 },
   );
 });
+test("owner and manager can edit completed assignments without proof; publishing still requires a URL", () => {
+  for (const actor of [owner, manager]) {
+    const s = state();
+    update(s, actor, "VD01", { status: "doing" });
+    update(s, actor, "VD01", { status: "review" });
+    update(s, actor, "VD01", { status: "done" });
+    update(s, actor, "VD01", {
+      assignee: employee.id,
+      dueDate: vietnamDate(),
+      status: "done",
+      publishedUrl: "",
+    });
+    assert.equal(s.tasks.find((t) => t.id === "VD01")!.assignee, employee.id);
+    assert.throws(
+      () => update(s, actor, "VD01", { publication: "published" }),
+      { status: 400 },
+    );
+    assert.equal(
+      s.tasks.find((t) => t.id === "VD01")!.publication,
+      "delivered",
+    );
+  }
+});
 test("optimistic version prevents overwriting newer changes", () => {
   const s = state();
   update(s, owner, "VD01", { progress: 95 }, 1);
@@ -166,7 +188,10 @@ test("optimistic version prevents overwriting newer changes", () => {
 test("comments preserve an open edit version; archived work cannot be changed by employees", () => {
   const s = state();
   const thisWeek = weekStart(vietnamDate());
-  update(s, owner, "VD01", { assignee: employee.id, dueDate: addDays(thisWeek, 1) });
+  update(s, owner, "VD01", {
+    assignee: employee.id,
+    dueDate: addDays(thisWeek, 1),
+  });
   s.tasks.find((t) => t.id === "VD01")!.proofImage = {
     url: "/api/assets/proof-VD01-c.png",
     name: "proof-VD01-c.png",
@@ -181,7 +206,10 @@ test("comments preserve an open edit version; archived work cannot be changed by
     s,
     employee,
     "VD01",
-    { status: "review", publishedUrl: "https://www.facebook.com/saoviet/posts/99" },
+    {
+      status: "review",
+      publishedUrl: "https://www.facebook.com/saoviet/posts/99",
+    },
     version,
   );
   assert.equal(s.tasks.find((t) => t.id === "VD01")!.comments.length, 1);

@@ -125,7 +125,7 @@ export function mutate(state: State, user: User, input: unknown) {
     }
     const enteringReview = next.status === "review" && task.status !== "review";
     const enteringDone = next.status === "done" && task.status !== "done";
-    if (enteringReview || enteringDone) {
+    if (!canManage(user) && (enteringReview || enteringDone)) {
       validateCompletionProof(next, state);
     }
     if (next.status === "done") next.progress = 100;

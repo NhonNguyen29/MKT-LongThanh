@@ -18,6 +18,8 @@ Không đưa máy chủ development qua tunnel hoặc public Internet. Nút TEST
 
 ## Quyền và quy trình
 
+Cập nhật 27/11: ảnh minh chứng và link kết quả bắt buộc khi **nhân viên gửi duyệt** (việc Kho Media kiểm tra tệp đã tải lên). **Chủ trung tâm/Quản lý** được giao việc, sửa thông tin, chuyển trạng thái và nghiệm thu mà không bắt buộc tự tải ảnh hoặc nhập link. Phần kết quả vẫn hiển thị để đối chiếu minh chứng nhân viên nộp. Với mọi vai trò được phép ghi nhận xuất bản, trạng thái **Đã xuất bản** vẫn cần URL HTTPS thực tế; hoàn thành công việc không tự chuyển thành đã xuất bản.
+
 | Vai trò       | Quyền                                                                                    |
 | ------------- | ---------------------------------------------------------------------------------------- |
 | Chủ trung tâm | Mọi công việc; tạo/khóa tài khoản; đổi vai trò quản lý/nhân viên; lịch nhắc              |

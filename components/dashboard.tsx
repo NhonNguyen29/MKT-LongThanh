@@ -335,9 +335,10 @@ export default function Dashboard() {
     [notice, setNotice] = useState(false),
     [mobile, setMobile] = useState(false),
     [busy, setBusy] = useState(false),
-    [mediaJump, setMediaJump] = useState<{ year: number; month: number } | null>(
-      null,
-    );
+    [mediaJump, setMediaJump] = useState<{
+      year: number;
+      month: number;
+    } | null>(null);
   const load = useCallback(async () => {
     try {
       const r = await fetch("/api/state", { cache: "no-store" });
@@ -1158,7 +1159,9 @@ export default function Dashboard() {
           )}
           {view === "media" && (
             <MediaVault
-              key={mediaJump ? `${mediaJump.year}-${mediaJump.month}` : "default"}
+              key={
+                mediaJump ? `${mediaJump.year}-${mediaJump.month}` : "default"
+              }
               items={data.mediaItems || []}
               tasks={data.tasks}
               users={data.users}
@@ -1179,7 +1182,8 @@ export default function Dashboard() {
                     {stageDone}/{data.build.length} hạng mục hoàn thành
                   </h2>
                   <p>
-                    Trạng thái cập nhật theo các hạng mục đã triển khai và kiểm tra.
+                    Trạng thái cập nhật theo các hạng mục đã triển khai và kiểm
+                    tra.
                   </p>
                 </div>
                 <div className="build-progress">
@@ -1296,12 +1300,18 @@ export default function Dashboard() {
                     onClick={async () => {
                       setBusy(true);
                       try {
-                        const r = await fetch("/api/notify", { method: "POST" });
+                        const r = await fetch("/api/notify", {
+                          method: "POST",
+                        });
                         const d = await r.json();
                         if (!r.ok) {
-                          setToast(d.error || "Không gửi được email nhắc việc.");
+                          setToast(
+                            d.error || "Không gửi được email nhắc việc.",
+                          );
                         } else if (d.sent === 0) {
-                          setToast("Hiện không có nhân viên nào có việc cần nhắc.");
+                          setToast(
+                            "Hiện không có nhân viên nào có việc cần nhắc.",
+                          );
                         } else {
                           setToast(
                             `Đã gửi email nhắc việc đến ${d.sent} nhân viên (${d.recipients.join(", ")}).`,
@@ -1675,7 +1685,9 @@ function TaskModal({
   }
   const lockedForEmployee =
     !manage &&
-    (task.archived || task.status === "done" || task.publication === "published");
+    (task.archived ||
+      task.status === "done" ||
+      task.publication === "published");
   async function save(e: FormEvent) {
     e.preventDefault();
     const patch: Record<string, unknown> = {
@@ -1839,8 +1851,9 @@ function TaskModal({
                 Tháng {String(task.mediaFolder.month).padStart(2, "0")}/
                 {task.mediaFolder.year}
               </strong>{" "}
-              (gồm 2 thư mục con Hình ảnh và Video). Cần tải lên ít nhất 1 tệp vào
-              thư mục trước khi gửi duyệt / hoàn thành.
+              (gồm 2 thư mục con Hình ảnh và Video). Cần tải lên ít nhất 1 tệp
+              vào thư mục trước khi nhân viên gửi duyệt. Admin/quản lý có thể
+              giao việc và cập nhật trạng thái mà không phải tải tệp minh chứng.
             </p>
             <button
               type="button"
@@ -1854,15 +1867,21 @@ function TaskModal({
           </div>
         ) : (
           <div className="publication-box">
-            <h3>Minh chứng hoàn thành &amp; xuất bản</h3>
+            <h3>
+              {manage
+                ? "Kết quả nhân viên & trạng thái xuất bản"
+                : "Minh chứng hoàn thành & xuất bản"}
+            </h3>
             <p>
-              Bắt buộc tải lên <strong>ảnh chụp màn hình công việc</strong> và nhập{" "}
-              <strong>link bài viết (https://…)</strong> mới được gửi duyệt hoặc xác
-              thực hoàn thành.
+              {manage
+                ? "Admin/quản lý không cần tải ảnh hoặc nhập link để giao việc, sửa thông tin hay nghiệm thu. Minh chứng do nhân viên nộp để bạn đối chiếu. Chỉ khi chọn Đã xuất bản mới bắt buộc có URL bài thực tế."
+                : "Khi gửi duyệt kết quả, nhân viên cần tải ảnh chụp màn hình công việc và nhập link bài viết (https://…). Có thể lưu tiến độ Đang làm trước khi có đủ minh chứng."}
             </p>
             <div className="form-grid">
               <label>
-                Link bài viết (bắt buộc khi hoàn thành)
+                {manage
+                  ? "URL bài thực tế (cần khi ghi Đã xuất bản)"
+                  : "Link bài viết (bắt buộc khi gửi duyệt)"}
                 <input
                   type="url"
                   placeholder="https://…"
@@ -1870,8 +1889,8 @@ function TaskModal({
                   disabled={lockedForEmployee}
                   onChange={(e) => field("publishedUrl", e.target.value)}
                   required={
-                    draft.status === "review" ||
-                    draft.status === "done" ||
+                    (!manage &&
+                      (draft.status === "review" || draft.status === "done")) ||
                     draft.publication === "published"
                   }
                 />
@@ -1893,7 +1912,10 @@ function TaskModal({
             </div>
             <div style={{ marginTop: 12 }}>
               <label>
-                Ảnh chụp màn hình minh chứng (PNG/JPG/WebP, tối đa 3,5 MB)
+                {manage
+                  ? "Ảnh minh chứng (admin có thể bổ sung, không bắt buộc)"
+                  : "Ảnh chụp màn hình minh chứng"}{" "}
+                (PNG/JPG/WebP, tối đa 3,5 MB)
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
@@ -1904,7 +1926,9 @@ function TaskModal({
                   }}
                 />
               </label>
-              {uploading && <small>Đang tải ảnh chụp màn hình lên hệ thống…</small>}
+              {uploading && (
+                <small>Đang tải ảnh chụp màn hình lên hệ thống…</small>
+              )}
               {uploadError && (
                 <div className="error" role="alert" style={{ marginTop: 6 }}>
                   {uploadError}
@@ -1932,9 +1956,15 @@ function TaskModal({
                   </a>
                   <small style={{ display: "block", marginTop: 4 }}>
                     Đã tải lên lúc{" "}
-                    {new Date(draft.proofImage.uploadedAt).toLocaleString("vi-VN")}{" "}
+                    {new Date(draft.proofImage.uploadedAt).toLocaleString(
+                      "vi-VN",
+                    )}{" "}
                     ·{" "}
-                    <a href={draft.proofImage.url} target="_blank" rel="noreferrer">
+                    <a
+                      href={draft.proofImage.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
                       Mở ảnh đầy đủ
                     </a>
                   </small>
